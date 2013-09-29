@@ -314,6 +314,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    *          the ranges that will be mapped over
    * @since 1.5.0
    */
+  @Deprecated
   public static void setRanges(JobConf job, Collection<Range> ranges) {
     InputConfigurator.setRanges(CLASS, job, ranges);
   }
@@ -329,6 +330,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @since 1.5.0
    * @see #setRanges(JobConf, Collection)
    */
+  @Deprecated
   protected static List<Range> getRanges(JobConf job) throws IOException {
     return InputConfigurator.getRanges(CLASS,job);
   }

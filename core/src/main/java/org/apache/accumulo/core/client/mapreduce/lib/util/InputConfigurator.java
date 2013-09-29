@@ -89,9 +89,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param tableName
    *          the table to use when the tablename is null in the write call
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void setInputTableName(Class<?> implementingClass, Configuration conf, String tableName) {
     notNull(tableName);
     conf.set(enumToConfKey(implementingClass, ScanOpts.TABLE), tableName);
@@ -105,9 +103,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param conf
    *          the Hadoop configuration object to configure
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static String getInputTableName(Class<?> implementingClass, Configuration conf) {
     return conf.get(enumToConfKey(implementingClass, ScanOpts.TABLE));
   }
@@ -156,9 +152,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @throws IllegalArgumentException
    *          if the ranges cannot be encoded into base 64
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void setRanges(Class<?> implementingClass, Configuration conf, Collection<Range> ranges) {
     notNull(ranges);
 
@@ -186,10 +180,8 @@ public class InputConfigurator extends ConfiguratorBase {
    * @throws IOException
    *           if the ranges have been encoded improperly
    * @since 1.6.0
-   * @deprecated since 1.6.0
    * @see #setRanges(Class, Configuration, Collection)
    */
-  @Deprecated
   public static List<Range> getRanges(Class<?> implementingClass, Configuration conf) throws IOException {
 
     Collection<String> encodedRanges = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.RANGES));
@@ -254,7 +246,6 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.5.0
    * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void fetchColumns(Class<?> implementingClass, Configuration conf, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     notNull(columnFamilyColumnQualifierPairs);
     ArrayList<String> columnStrings = new ArrayList<String>();
@@ -306,9 +297,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @throws IllegalArgumentException
    *          if the iterator can't be serialized into the configuration
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void addIterator(Class<?> implementingClass, Configuration conf, IteratorSetting cfg) {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     String newIter;
@@ -348,9 +337,7 @@ public class InputConfigurator extends ConfiguratorBase {
    *          the feature is enabled if true, disabled otherwise
    * @see #setRanges(Class, Configuration, Collection)
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void setAutoAdjustRanges(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.AUTO_ADJUST_RANGES), enableFeature);
   }
@@ -365,9 +352,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return false if the feature is disabled, true otherwise
    * @since 1.5.0
    * @see #setAutoAdjustRanges(Class, Configuration, boolean)
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static Boolean getAutoAdjustRanges(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.AUTO_ADJUST_RANGES), true);
   }
@@ -385,9 +370,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void setScanIsolation(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.SCAN_ISOLATION), enableFeature);
   }
@@ -402,9 +385,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setScanIsolation(Class, Configuration, boolean)
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static Boolean isIsolated(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.SCAN_ISOLATION), false);
   }
@@ -423,9 +404,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static void setLocalIterators(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), enableFeature);
   }
@@ -440,9 +419,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setLocalIterators(Class, Configuration, boolean)
-   * @deprecated since 1.6.0
    */
-  @Deprecated
   public static Boolean usesLocalIterators(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), false);
   }
@@ -615,9 +592,6 @@ public class InputConfigurator extends ConfiguratorBase {
           }
         }
       }
-
-      // TODO: Check for the "default table case"
-
     } catch (AccumuloException e) {
       throw new IOException(e);
     } catch (AccumuloSecurityException e) {
@@ -627,7 +601,17 @@ public class InputConfigurator extends ConfiguratorBase {
     }
   }
 
-
+  /**
+   * Returns the {@link TableQueryConfig} for the configuration based on the properties set using the single-table
+   * input methods.
+   *
+   * @param implementingClass
+   *          the class whose name will be used as a prefix for the property configuration key
+   * @param conf
+   *          the Hadoop instance for which to retrieve the configuration
+   * @return the config object built from the single input table properties set on the job
+   * @throws IOException
+   */
   protected static TableQueryConfig getDefaultTableConfig(Class<?> implementingClass, Configuration conf) throws IOException {
     String tableName = getInputTableName(implementingClass, conf);
     if(tableName != null) {
@@ -650,6 +634,4 @@ public class InputConfigurator extends ConfiguratorBase {
     }
     return null;
   }
-
-
 }

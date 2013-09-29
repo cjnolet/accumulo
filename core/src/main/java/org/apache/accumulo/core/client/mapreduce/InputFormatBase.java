@@ -157,7 +157,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setConnectorInfo(Job, String, AuthenticationToken)
    */
   protected static String getPrincipal(JobContext context) {
-    return InputConfigurator.getPrincipal(CLASS, getConfiguration(context));
+    return InputConfigurator.getPrincipal(CLASS,getConfiguration(context));
   }
   
   /**
@@ -170,7 +170,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setInputTableName(Job, String)
    */
   protected static String getInputTableName(JobContext context) {
-    return InputConfigurator.getInputTableName(CLASS, getConfiguration(context));
+    return InputConfigurator.getInputTableName(CLASS,getConfiguration(context));
   }
   
   /**
@@ -206,7 +206,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setConnectorInfo(Job, String, String)
    */
   protected static AuthenticationToken getAuthenticationToken(JobContext context) {
-    return InputConfigurator.getAuthenticationToken(CLASS, getConfiguration(context));
+    return InputConfigurator.getAuthenticationToken(CLASS,getConfiguration(context));
   }
   
   /**
@@ -234,7 +234,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    */
   public static void setMockInstance(Job job, String instanceName) {
-    InputConfigurator.setMockInstance(CLASS, job.getConfiguration(), instanceName);
+    InputConfigurator.setMockInstance(CLASS,job.getConfiguration(),instanceName);
   }
   
   /**
@@ -286,7 +286,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the table to use when the tablename is null in the write call
    * @since 1.5.0
    */
-  @Deprecated
   public static void setInputTableName(Job job, String tableName) {
     InputConfigurator.setInputTableName(CLASS, job.getConfiguration(), tableName);
   }
@@ -301,7 +300,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    */
   public static void setScanAuthorizations(Job job, Authorizations auths) {
-    InputConfigurator.setScanAuthorizations(CLASS, job.getConfiguration(), auths);
+    InputConfigurator.setScanAuthorizations(CLASS,job.getConfiguration(),auths);
   }
   
   /**
@@ -327,7 +326,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the ranges that will be mapped over
    * @since 1.5.0
    */
-  @Deprecated
   public static void setRanges(Job job, Collection<Range> ranges) {
     InputConfigurator.setRanges(CLASS, job.getConfiguration(), ranges);
   }
@@ -342,7 +340,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setRanges(Job, Collection)
    * @see #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Collection)
    */
-  @Deprecated
   protected static List<Range> getRanges(JobContext context) throws IOException {
     return InputConfigurator.getRanges(CLASS, getConfiguration(context));
   }
@@ -357,7 +354,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          selected. An empty set is the default and is equivalent to scanning the all columns.
    * @since 1.5.0
    */
-  @Deprecated
   public static void fetchColumns(Job job, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     InputConfigurator.fetchColumns(CLASS, job.getConfiguration(), columnFamilyColumnQualifierPairs);
   }
@@ -384,14 +380,12 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the configuration of the iterator
    * @since 1.5.0
    */
-  @Deprecated
   public static void addIterator(Job job, IteratorSetting cfg) {
     InputConfigurator.addIterator(CLASS, job.getConfiguration(), cfg);
   }
   
   /**
-   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration. This will only return iterators that have not been set
-   * for a specific table.
+   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration.
    * 
    * @param context
    *          the Hadoop context for the configured job
@@ -399,7 +393,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    * @see #addIterator(Job, IteratorSetting)
    */
-  @Deprecated
   protected static List<IteratorSetting> getIterators(JobContext context) {
     return InputConfigurator.getIterators(CLASS, getConfiguration(context));
   }
@@ -418,7 +411,6 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setRanges(Job, Collection)
    * @since 1.5.0
    */
-  @Deprecated
   public static void setAutoAdjustRanges(Job job, boolean enableFeature) {
     InputConfigurator.setAutoAdjustRanges(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -432,21 +424,52 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    * @see #setAutoAdjustRanges(Job, boolean)
    */
-  @Deprecated
   protected static boolean getAutoAdjustRanges(JobContext context) {
     return InputConfigurator.getAutoAdjustRanges(CLASS, getConfiguration(context));
   }
-  
-  protected static void setTableQueryConfigurations(JobContext job, TableQueryConfig... configs) {
+
+  /**
+   * Sets the {@link TableQueryConfig} objects on the given Hadoop configuration
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param configs
+   *          the table query configs to be set on the configuration.
+   */
+  public static void setTableQueryConfigs(JobContext job, TableQueryConfig... configs) {
     checkNotNull(configs);
     InputConfigurator.setTableQueryConfigs(CLASS, getConfiguration(job), configs);
   }
-  
-  public static List<TableQueryConfig> getTableQueryConfigurations(JobContext job) {
+
+  /**
+   * Fetches all {@link TableQueryConfig}s that have been set on the given Hadoop configuration.
+   *
+   * <p>
+   * Note this also returns the {@link TableQueryConfig} representing the table configurations set through the single
+   * table input methods ({@link #setInputTableName(org.apache.hadoop.mapreduce.Job, String)},
+   * {@link #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Collection)},
+   * {@link #fetchColumns(org.apache.hadoop.mapreduce.Job, java.util.Collection)},
+   * {@link #addIterator(org.apache.hadoop.mapreduce.Job, org.apache.accumulo.core.client.IteratorSetting)}, etc...)
+   *
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @return
+   */
+  public static List<TableQueryConfig> getTableQueryConfigs(JobContext job) {
     return InputConfigurator.getTableQueryConfigs(CLASS, getConfiguration(job));
   }
-  
-  protected static TableQueryConfig getTableQueryConfiguration(JobContext job, String tableName) {
+
+  /**
+   * Fetches a {@link TableQueryConfig} that has been set on the configuration for a specific table.
+   *
+   * <p>
+   * null is returned in the event that the table doesn't exist.
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param tableName
+   *          the table name for which to grab the config object
+   * @return the {@link TableQueryConfig} for the given table
+   */
+  public static TableQueryConfig getTableQueryConfig(JobContext job, String tableName) {
     return InputConfigurator.getTableQueryConfigs(CLASS, getConfiguration(job), tableName);
   }
   
@@ -615,7 +638,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
      *          the table name for which to set up the iterators
      */
     protected void setupIterators(TaskAttemptContext context, Scanner scanner, String tableName) {
-      TableQueryConfig config = getTableQueryConfiguration(context, tableName);
+      TableQueryConfig config = getTableQueryConfig(context,tableName);
       List<IteratorSetting> iterators = config.getIterators();
       for (IteratorSetting iterator : iterators)
         scanner.addScanIterator(iterator);
@@ -633,7 +656,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
       Instance instance = getInstance(attempt);
       String principal = getPrincipal(attempt);
       
-      TableQueryConfig tableConfig = getTableQueryConfiguration(attempt, split.getTableName());
+      TableQueryConfig tableConfig = getTableQueryConfig(attempt,split.getTableName());
       
       // in case the table name changed, we can still use the previous name for terms of configuration,
       // but for the scanner, we'll need to reference the new table name.
@@ -828,7 +851,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
     validateOptions(conf);
     
     LinkedList<InputSplit> splits = new LinkedList<InputSplit>();
-    List<TableQueryConfig> tableConfigs = getTableQueryConfigurations(conf);
+    List<TableQueryConfig> tableConfigs = getTableQueryConfigs(conf);
     for (TableQueryConfig tableConfig : tableConfigs) {
       
       boolean autoAdjust = tableConfig.shouldAutoAdjustRanges();

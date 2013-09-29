@@ -25,15 +25,9 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.apache.accumulo.core.client.Connector;
@@ -47,7 +41,6 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.user.RegExFilter;
 import org.apache.accumulo.core.iterators.user.WholeRowIterator;
-import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.CachedConfiguration;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.commons.codec.binary.Base64;
@@ -264,7 +257,7 @@ public class AccumuloInputFormatTest {
       TableQueryConfig tableConfig1 = new TableQueryConfig(table1);
       TableQueryConfig tableConfig2 = new TableQueryConfig(table2);
 
-      AccumuloInputFormat.setTableQueryConfigurations(job, tableConfig1, tableConfig2);
+      AccumuloInputFormat.setTableQueryConfigs(job,tableConfig1,tableConfig2);
       AccumuloInputFormat.setMockInstance(job, INSTANCE_NAME);
 
       job.setMapperClass(TestMapper.class);
@@ -326,9 +319,9 @@ public class AccumuloInputFormatTest {
             .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
             .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
 
-    AccumuloInputFormat.setTableQueryConfigurations(job, table1, table2);
+    AccumuloInputFormat.setTableQueryConfigs(job,table1,table2);
 
-    assertEquals(table1, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_1));
-    assertEquals(table2, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_2));
+    assertEquals(table1, AccumuloInputFormat.getTableQueryConfig(job,TEST_TABLE_1));
+    assertEquals(table2, AccumuloInputFormat.getTableQueryConfig(job,TEST_TABLE_2));
   }
 }
