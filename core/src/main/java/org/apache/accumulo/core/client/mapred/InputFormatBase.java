@@ -594,6 +594,19 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       AuthenticationToken token = getAuthenticationToken(job);
       Authorizations authorizations = getScanAuthorizations(job);
 
+      // in case the table name changed, we can still use the previous name for terms of configuration,
+      // but for the scanner, we'll need to reference the new table name.
+      String actualNameForId = split.getTableName();
+      if(!(instance instanceof MockInstance)) {   // Really, the Tables helper class should not be tied to Zookeeper
+        try {
+          actualNameForId = Tables.getTableName(instance, split.getTableId());
+          if (!actualNameForId.equals(split.getTableName()))
+            log.debug("Table name changed from " + split.getTableName() + " to " + actualNameForId);
+        } catch (TableNotFoundException e) {
+          throw new IOException("The specified table was not found for id=" + split.getTableId());
+        }
+      }
+
       try {
         log.debug("Creating connector with user: " + user);
         Connector conn = instance.getConnector(user, token);
@@ -602,7 +615,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         if (isOfflineScan(job)) {
           scanner = new OfflineScanner(instance, new Credentials(user, token), Tables.getTableId(instance, getInputTableName(job)), authorizations);
         } else {
-          scanner = conn.createScanner(getInputTableName(job), authorizations);
+          scanner = conn.createScanner(actualNameForId, authorizations);
         }
         if (isIsolated(job)) {
           log.info("Creating isolated scanner");

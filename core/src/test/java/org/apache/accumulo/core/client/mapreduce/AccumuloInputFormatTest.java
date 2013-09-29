@@ -331,5 +331,4 @@ public class AccumuloInputFormatTest {
     assertEquals(table1, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_1));
     assertEquals(table2, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_2));
   }
-
 }
