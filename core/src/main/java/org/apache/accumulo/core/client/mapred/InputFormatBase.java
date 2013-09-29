@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -132,7 +133,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setConnectorInfo(JobConf, String, AuthenticationToken)
    */
   protected static Boolean isConnectorInfoSet(JobConf job) {
-    return InputConfigurator.isConnectorInfoSet(CLASS, job);
+    return InputConfigurator.isConnectorInfoSet(CLASS,job);
   }
 
   /**
@@ -275,7 +276,11 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setInputTableName(JobConf, String)
    */
   protected static String getInputTableName(JobConf job) {
-    return InputConfigurator.getInputTableName(CLASS, job);
+    String[] tableNames = InputConfigurator.getInputTableNames(CLASS, job);
+    if (tableNames.length > 0)
+      return tableNames[0];
+    else
+      return null;
   }
 
   /**
@@ -329,7 +334,12 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setRanges(JobConf, Collection)
    */
   protected static List<Range> getRanges(JobConf job) throws IOException {
-    return InputConfigurator.getRanges(CLASS, job);
+    Map<String, List<Range>> tableRanges = InputConfigurator.getRanges(CLASS,job);
+    List<Range> ranges = tableRanges.get(getInputTableName(job));
+    if(ranges != null)
+      return ranges;
+    else
+      return new LinkedList<Range>();
   }
 
   /**
@@ -356,7 +366,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #fetchColumns(JobConf, Collection)
    */
   protected static Set<Pair<Text,Text>> getFetchedColumns(JobConf job) {
-    return InputConfigurator.getFetchedColumns(CLASS, job);
+    return InputConfigurator.getFetchedColumns(CLASS, job, getInputTableName(job));
   }
 
   /**
@@ -382,7 +392,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #addIterator(JobConf, IteratorSetting)
    */
   protected static List<IteratorSetting> getIterators(JobConf job) {
-    return InputConfigurator.getIterators(CLASS, job);
+    return InputConfigurator.getDefaultIterators(CLASS,job);
   }
 
   /**
@@ -533,8 +543,8 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    *           if the table name set on the configuration doesn't exist
    * @since 1.5.0
    */
-  protected static TabletLocator getTabletLocator(JobConf job) throws TableNotFoundException {
-    return InputConfigurator.getTabletLocator(CLASS, job);
+  protected static TabletLocator getTabletLocator(JobConf job, String tableName) throws TableNotFoundException {
+    return InputConfigurator.getTabletLocator(CLASS, job, tableName);
   }
 
   // InputFormat doesn't have the equivalent of OutputFormat's checkOutputSpecs(JobContext job)
@@ -760,9 +770,12 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
     log.setLevel(getLogLevel(job));
     validateOptions(job);
 
-    String tableName = getInputTableName(job);
     boolean autoAdjust = getAutoAdjustRanges(job);
-    List<Range> ranges = autoAdjust ? Range.mergeOverlapping(getRanges(job)) : getRanges(job);
+    List<Range> tablesRanges = getRanges(job);
+    LinkedList<InputSplit> splits = new LinkedList<InputSplit>();
+
+    String tableName = getInputTableName(job);
+    List<Range> ranges = autoAdjust ? Range.mergeOverlapping(tablesRanges) : tablesRanges;
 
     if (ranges.isEmpty()) {
       ranges = new ArrayList<Range>(1);
@@ -772,6 +785,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
     // get the metadata information for these ranges
     Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
     TabletLocator tl;
+    String tableId = null;
     try {
       if (isOfflineScan(job)) {
         binnedRanges = binOfflineTable(job, tableName, ranges);
@@ -782,13 +796,13 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         }
       } else {
         Instance instance = getInstance(job);
-        String tableId = null;
-        tl = getTabletLocator(job);
+        tl = getTabletLocator(job, tableName);
         // its possible that the cache could contain complete, but old information about a tables tablets... so clear it
         tl.invalidateCache();
-        while (!tl.binRanges(new Credentials(getPrincipal(job), getAuthenticationToken(job)), ranges, binnedRanges).isEmpty()) {
+        Credentials creds = new Credentials(getPrincipal(job), AuthenticationTokenSerializer.deserialize(getTokenClass(job), getToken(job)));
+
+        while (!tl.binRanges(creds, ranges, binnedRanges).isEmpty()) {
           if (!(instance instanceof MockInstance)) {
-            if (tableId == null)
               tableId = Tables.getTableId(instance, tableName);
             if (!Tables.exists(instance, tableId))
               throw new TableDeletedException(tableId);
@@ -804,8 +818,6 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
     } catch (Exception e) {
       throw new IOException(e);
     }
-
-    ArrayList<InputSplit> splits = new ArrayList<InputSplit>(ranges.size());
     HashMap<Range,ArrayList<String>> splitsToAdd = null;
 
     if (!autoAdjust)
@@ -827,7 +839,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         for (Range r : extentRanges.getValue()) {
           if (autoAdjust) {
             // divide ranges into smaller ranges, based on the tablets
-            splits.add(new RangeInputSplit(tableName, ke.clip(r), new String[] {location}));
+            splits.add(new RangeInputSplit(tableName, tableId, ke.clip(r), new String[] {location}));
           } else {
             // don't divide ranges
             ArrayList<String> locations = splitsToAdd.get(r);
@@ -842,7 +854,8 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
 
     if (!autoAdjust)
       for (Entry<Range,ArrayList<String>> entry : splitsToAdd.entrySet())
-        splits.add(new RangeInputSplit(tableName, entry.getKey(), entry.getValue().toArray(new String[0])));
+        splits.add(new RangeInputSplit(tableName, tableId, entry.getKey(), entry.getValue().toArray(new String[0])));
+
     return splits.toArray(new InputSplit[splits.size()]);
   }
 
@@ -859,8 +872,8 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       super(split);
     }
 
-    protected RangeInputSplit(String table, Range range, String[] locations) {
-      super(table, range, locations);
+    protected RangeInputSplit(String table, String tableId, Range range, String[] locations) {
+      super(table, tableId,  range, locations);
     }
 
   }

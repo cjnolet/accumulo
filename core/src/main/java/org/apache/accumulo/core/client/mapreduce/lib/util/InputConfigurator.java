@@ -16,6 +16,8 @@
  */
 package org.apache.accumulo.core.client.mapreduce.lib.util;
 
+import static org.apache.accumulo.core.util.ArgumentChecker.notNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -23,10 +25,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.TreeMap;
 
 import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.client.AccumuloException;
@@ -42,11 +42,11 @@ import org.apache.accumulo.core.client.impl.Tables;
 import org.apache.accumulo.core.client.impl.TabletLocator;
 import org.apache.accumulo.core.client.mock.MockTabletLocator;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
+import org.apache.accumulo.core.conf.TableQueryConfig;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.TablePermission;
-import org.apache.accumulo.core.util.ArgumentChecker;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.accumulo.core.util.TextUtil;
 import org.apache.commons.codec.binary.Base64;
@@ -65,7 +65,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.5.0
    */
   public static enum ScanOpts {
-    TABLE_NAME, AUTHORIZATIONS, RANGES, COLUMNS, ITERATORS
+    TABLE, AUTHORIZATIONS, RANGES, COLUMNS, ITERATORS
   }
 
   /**
@@ -87,25 +87,27 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param tableName
    *          the table to use when the tablename is null in the write call
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setInputTableName(Class<?> implementingClass, Configuration conf, String tableName) {
-    ArgumentChecker.notNull(tableName);
-    conf.set(enumToConfKey(implementingClass, ScanOpts.TABLE_NAME), tableName);
+    notNull(tableName);
+    conf.set(enumToConfKey(implementingClass, ScanOpts.TABLE), tableName);
   }
 
   /**
-   * Gets the table name from the configuration.
-   * 
+   * Sets the name of the input table, over which this job will scan.
+   *
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
    *          the Hadoop configuration object to configure
-   * @return the table name
    * @since 1.5.0
-   * @see #setInputTableName(Class, Configuration, String)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static String getInputTableName(Class<?> implementingClass, Configuration conf) {
-    return conf.get(enumToConfKey(implementingClass, ScanOpts.TABLE_NAME));
+    return conf.get(enumToConfKey(implementingClass, ScanOpts.TABLE));
   }
 
   /**
@@ -141,7 +143,7 @@ public class InputConfigurator extends ConfiguratorBase {
   }
 
   /**
-   * Sets the input ranges to scan for this job. If not set, the entire table will be scanned.
+   * Sets the input ranges to scan on all input tables for this job. If not set, the entire table will be scanned.
    * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
@@ -149,21 +151,26 @@ public class InputConfigurator extends ConfiguratorBase {
    *          the Hadoop configuration object to configure
    * @param ranges
    *          the ranges that will be mapped over
+   * @throws IllegalArgumentException
+   *          if the ranges cannot be encoded into base 64
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setRanges(Class<?> implementingClass, Configuration conf, Collection<Range> ranges) {
-    ArgumentChecker.notNull(ranges);
+    notNull(ranges);
+
     ArrayList<String> rangeStrings = new ArrayList<String>(ranges.size());
     try {
       for (Range r : ranges) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         r.write(new DataOutputStream(baos));
-        rangeStrings.add(new String(Base64.encodeBase64(baos.toByteArray()), Constants.UTF8));
+        rangeStrings.add(new String(Base64.encodeBase64(baos.toByteArray())));
       }
+      conf.setStrings(enumToConfKey(implementingClass, ScanOpts.RANGES), rangeStrings.toArray(new String[0]));
     } catch (IOException ex) {
       throw new IllegalArgumentException("Unable to encode ranges to Base64", ex);
     }
-    conf.setStrings(enumToConfKey(implementingClass, ScanOpts.RANGES), rangeStrings.toArray(new String[0]));
   }
 
   /**
@@ -176,13 +183,17 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return the ranges
    * @throws IOException
    *           if the ranges have been encoded improperly
-   * @since 1.5.0
+   * @since 1.6.0
+   * @deprecated since 1.6.0
    * @see #setRanges(Class, Configuration, Collection)
    */
+  @Deprecated
   public static List<Range> getRanges(Class<?> implementingClass, Configuration conf) throws IOException {
-    ArrayList<Range> ranges = new ArrayList<Range>();
-    for (String rangeString : conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.RANGES))) {
-      ByteArrayInputStream bais = new ByteArrayInputStream(Base64.decodeBase64(rangeString.getBytes(Constants.UTF8)));
+
+    Collection<String> encodedRanges = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.RANGES));
+    List<Range> ranges = new ArrayList<Range>();
+    for (String rangeString : encodedRanges) {
+      ByteArrayInputStream bais = new ByteArrayInputStream(Base64.decodeBase64(rangeString.getBytes()));
       Range range = new Range();
       range.readFields(new DataInputStream(bais));
       ranges.add(range);
@@ -191,7 +202,7 @@ public class InputConfigurator extends ConfiguratorBase {
   }
 
   /**
-   * Restricts the columns that will be mapped over for this job.
+   * Restricts the columns that will be mapped over for this job. This applies the columns to all tables that have been set on the job.
    * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
@@ -200,12 +211,17 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param columnFamilyColumnQualifierPairs
    *          a pair of {@link Text} objects corresponding to column family and column qualifier. If the column qualifier is null, the entire column family is
    *          selected. An empty set is the default and is equivalent to scanning the all columns.
+   * @throws IllegalArgumentException
+   *          if the column family is null
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void fetchColumns(Class<?> implementingClass, Configuration conf, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
-    ArgumentChecker.notNull(columnFamilyColumnQualifierPairs);
-    ArrayList<String> columnStrings = new ArrayList<String>(columnFamilyColumnQualifierPairs.size());
+    notNull(columnFamilyColumnQualifierPairs);
+    ArrayList<String> columnStrings = new ArrayList<String>();
     for (Pair<Text,Text> column : columnFamilyColumnQualifierPairs) {
+
       if (column.getFirst() == null)
         throw new IllegalArgumentException("Column family can not be null");
 
@@ -218,29 +234,7 @@ public class InputConfigurator extends ConfiguratorBase {
   }
 
   /**
-   * Gets the columns to be mapped over from this job.
-   * 
-   * @param implementingClass
-   *          the class whose name will be used as a prefix for the property configuration key
-   * @param conf
-   *          the Hadoop configuration object to configure
-   * @return a set of columns
-   * @since 1.5.0
-   * @see #fetchColumns(Class, Configuration, Collection)
-   */
-  public static Set<Pair<Text,Text>> getFetchedColumns(Class<?> implementingClass, Configuration conf) {
-    Set<Pair<Text,Text>> columns = new HashSet<Pair<Text,Text>>();
-    for (String col : conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.COLUMNS))) {
-      int idx = col.indexOf(":");
-      Text cf = new Text(idx < 0 ? Base64.decodeBase64(col.getBytes(Constants.UTF8)) : Base64.decodeBase64(col.substring(0, idx).getBytes(Constants.UTF8)));
-      Text cq = idx < 0 ? null : new Text(Base64.decodeBase64(col.substring(idx + 1).getBytes()));
-      columns.add(new Pair<Text,Text>(cf, cq));
-    }
-    return columns;
-  }
-
-  /**
-   * Encode an iterator on the input for this job.
+   * Encode an iterator on the input for all tables associated with this job.
    * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
@@ -248,8 +242,12 @@ public class InputConfigurator extends ConfiguratorBase {
    *          the Hadoop configuration object to configure
    * @param cfg
    *          the configuration of the iterator
+   * @throws IllegalArgumentException
+   *          if the iterator can't be serialized into the configuration
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void addIterator(Class<?> implementingClass, Configuration conf, IteratorSetting cfg) {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     String newIter;
@@ -261,7 +259,8 @@ public class InputConfigurator extends ConfiguratorBase {
       throw new IllegalArgumentException("unable to serialize IteratorSetting");
     }
 
-    String iterators = conf.get(enumToConfKey(implementingClass, ScanOpts.ITERATORS));
+    String confKey = enumToConfKey(implementingClass, ScanOpts.ITERATORS);
+    String iterators = conf.get(confKey);
     // No iterators specified yet, create a new string
     if (iterators == null || iterators.isEmpty()) {
       iterators = newIter;
@@ -270,41 +269,7 @@ public class InputConfigurator extends ConfiguratorBase {
       iterators = iterators.concat(StringUtils.COMMA_STR + newIter);
     }
     // Store the iterators w/ the job
-    conf.set(enumToConfKey(implementingClass, ScanOpts.ITERATORS), iterators);
-  }
-
-  /**
-   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration.
-   * 
-   * @param implementingClass
-   *          the class whose name will be used as a prefix for the property configuration key
-   * @param conf
-   *          the Hadoop configuration object to configure
-   * @return a list of iterators
-   * @since 1.5.0
-   * @see #addIterator(Class, Configuration, IteratorSetting)
-   */
-  public static List<IteratorSetting> getIterators(Class<?> implementingClass, Configuration conf) {
-    String iterators = conf.get(enumToConfKey(implementingClass, ScanOpts.ITERATORS));
-
-    // If no iterators are present, return an empty list
-    if (iterators == null || iterators.isEmpty())
-      return new ArrayList<IteratorSetting>();
-
-    // Compose the set of iterators encoded in the job configuration
-    StringTokenizer tokens = new StringTokenizer(iterators, StringUtils.COMMA_STR);
-    List<IteratorSetting> list = new ArrayList<IteratorSetting>();
-    try {
-      while (tokens.hasMoreTokens()) {
-        String itstring = tokens.nextToken();
-        ByteArrayInputStream bais = new ByteArrayInputStream(Base64.decodeBase64(itstring.getBytes()));
-        list.add(new IteratorSetting(new DataInputStream(bais)));
-        bais.close();
-      }
-    } catch (IOException e) {
-      throw new IllegalArgumentException("couldn't decode iterator settings");
-    }
-    return list;
+    conf.set(confKey, iterators);
   }
 
   /**
@@ -322,7 +287,9 @@ public class InputConfigurator extends ConfiguratorBase {
    *          the feature is enabled if true, disabled otherwise
    * @see #setRanges(Class, Configuration, Collection)
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setAutoAdjustRanges(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.AUTO_ADJUST_RANGES), enableFeature);
   }
@@ -337,7 +304,9 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return false if the feature is disabled, true otherwise
    * @since 1.5.0
    * @see #setAutoAdjustRanges(Class, Configuration, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static Boolean getAutoAdjustRanges(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.AUTO_ADJUST_RANGES), true);
   }
@@ -355,7 +324,9 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setScanIsolation(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.SCAN_ISOLATION), enableFeature);
   }
@@ -370,7 +341,9 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setScanIsolation(Class, Configuration, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static Boolean isIsolated(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.SCAN_ISOLATION), false);
   }
@@ -389,7 +362,9 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setLocalIterators(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
     conf.setBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), enableFeature);
   }
@@ -404,7 +379,9 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setLocalIterators(Class, Configuration, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static Boolean usesLocalIterators(Class<?> implementingClass, Configuration conf) {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), false);
   }
@@ -461,6 +438,59 @@ public class InputConfigurator extends ConfiguratorBase {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.SCAN_OFFLINE), false);
   }
 
+  public static void setTableQueryConfiguration(Class<?> implementingClass, Configuration conf, TableQueryConfig... tconf) {
+    List<String> tableQueryConfigStrings = new ArrayList<String>();
+    for(TableQueryConfig queryConfig : tconf) {
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      try {
+        queryConfig.write(new DataOutputStream(baos));
+      } catch(IOException e) {
+        throw new IllegalStateException("Configuration for " + queryConfig.getTableName() + " could not be serialized.");
+      }
+      tableQueryConfigStrings.add(new String(Base64.encodeBase64(baos.toByteArray())));
+    }
+    String confKey = enumToConfKey(implementingClass, ScanOpts.TABLE);
+    conf.setStrings(confKey, tableQueryConfigStrings.toArray(new String[0]));
+  }
+
+  public static List<TableQueryConfig> getTableQueryConfigurations(Class<?> implementingClass, Configuration conf) {
+    List<TableQueryConfig> configs = new ArrayList<TableQueryConfig>();
+    Collection<String> configStrings = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.TABLE));
+    if(configStrings == null) {
+      for(String str : configStrings) {
+        try{
+          byte[] bytes = Base64.decodeBase64(str.getBytes());
+          ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+          configs.add(new TableQueryConfig(new DataInputStream(bais)));
+          bais.close();
+        } catch(IOException e) {
+          throw new IllegalStateException("The table query configurations could not be deserialized from the given configuration");
+        }
+      }
+    }
+    return configs;
+  }
+
+  public static TableQueryConfig getTableQueryConfiguration(Class<?> implementingClass, Configuration conf, String tableName) {
+    Collection<String> configStrings = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.TABLE));
+    if(configStrings == null) {
+      for(String str : configStrings) {
+        if(str.equals(tableName)) {
+          try{
+            byte[] bytes = Base64.decodeBase64(str.getBytes());
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+            TableQueryConfig config = new TableQueryConfig(new DataInputStream(bais));
+            bais.close();
+            return config;
+          } catch(IOException e) {
+            throw new IllegalStateException("The table query configurations could not be deserialized from the given configuration");
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Initializes an Accumulo {@link TabletLocator} based on the configuration.
    * 
@@ -468,17 +498,18 @@ public class InputConfigurator extends ConfiguratorBase {
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
    *          the Hadoop configuration object to configure
+   * @param tableName
+   *          The table name for which to initialize the {@link TabletLocator}
    * @return an Accumulo tablet locator
    * @throws TableNotFoundException
    *           if the table name set on the configuration doesn't exist
-   * @since 1.5.0
+   * @since 1.6.0
    */
-  public static TabletLocator getTabletLocator(Class<?> implementingClass, Configuration conf) throws TableNotFoundException {
+  public static TabletLocator getTabletLocator(Class<?> implementingClass, Configuration conf, String tableName) throws TableNotFoundException {
     String instanceType = conf.get(enumToConfKey(implementingClass, InstanceOpts.TYPE));
     if ("MockInstance".equals(instanceType))
       return new MockTabletLocator();
     Instance instance = getInstance(implementingClass, conf);
-    String tableName = getInputTableName(implementingClass, conf);
     return TabletLocator.getLocator(instance, new Text(Tables.getTableId(instance, tableName)));
   }
 
@@ -507,16 +538,25 @@ public class InputConfigurator extends ConfiguratorBase {
       Connector c = getInstance(implementingClass, conf).getConnector(principal, token);
       if (!c.securityOperations().authenticateUser(principal, token))
         throw new IOException("Unable to authenticate user");
-      if (!c.securityOperations().hasTablePermission(principal, getInputTableName(implementingClass, conf), TablePermission.READ))
-        throw new IOException("Unable to access table");
 
-      if (!conf.getBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), false)) {
-        // validate that any scan-time iterators can be loaded by the the tablet servers
-        for (IteratorSetting iter : getIterators(implementingClass, conf)) {
-          if (!c.tableOperations().testClassLoad(getInputTableName(implementingClass, conf), iter.getIteratorClass(), SortedKeyValueIterator.class.getName()))
-            throw new AccumuloException("Servers are unable to load " + iter.getIteratorClass() + " as a " + SortedKeyValueIterator.class.getName());
+      for (TableQueryConfig tableConfig : getTableQueryConfigurations(implementingClass, conf)) {
+        if (!c.securityOperations().hasTablePermission(getPrincipal(implementingClass, conf), tableConfig.getTableName(), TablePermission.READ))
+          throw new IOException("Unable to access table");
+      }
+
+      for (TableQueryConfig tableConfig : getTableQueryConfigurations(implementingClass,conf)) {
+        if(!tableConfig.shouldUseLocalIterators()) {
+//        if (!conf.getBoolean(enumToConfKey(implementingClass, Features.USE_LOCAL_ITERATORS), false)) {
+          // validate that any scan-time iterators can be loaded by the the tablet servers
+          for (IteratorSetting iter : tableConfig.getIterators()) { // TODO: These iterators need to be separated by table
+            if (!c.tableOperations().testClassLoad(tableConfig.getTableName(), iter.getIteratorClass(), SortedKeyValueIterator.class.getName()))
+              throw new AccumuloException("Servers are unable to load " + iter.getIteratorClass() + " as a " + SortedKeyValueIterator.class.getName());
+
+          }
         }
       }
+
+      // TODO: Check for the "default table case"
 
     } catch (AccumuloException e) {
       throw new IOException(e);

@@ -16,6 +16,9 @@
  */
 package org.apache.accumulo.core.client.mapreduce;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.accumulo.core.client.security.tokens.AuthenticationToken.AuthenticationTokenSerializer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -50,7 +54,7 @@ import org.apache.accumulo.core.client.impl.TabletLocator;
 import org.apache.accumulo.core.client.mapreduce.lib.util.InputConfigurator;
 import org.apache.accumulo.core.client.mock.MockInstance;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
-import org.apache.accumulo.core.client.security.tokens.AuthenticationToken.AuthenticationTokenSerializer;
+import org.apache.accumulo.core.conf.TableQueryConfig;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.KeyExtent;
@@ -189,7 +193,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setConnectorInfo(Job, String, String)
    */
   protected static AuthenticationToken getAuthenticationToken(JobContext context) {
-    return InputConfigurator.getAuthenticationToken(CLASS, getConfiguration(context));
+    return InputConfigurator.getAuthenticationToken(CLASS,getConfiguration(context));
   }
 
   /**
@@ -231,7 +235,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setMockInstance(Job, String)
    */
   protected static Instance getInstance(JobContext context) {
-    return InputConfigurator.getInstance(CLASS, getConfiguration(context));
+    return InputConfigurator.getInstance(CLASS,getConfiguration(context));
   }
 
   /**
@@ -244,7 +248,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    */
   public static void setLogLevel(Job job, Level level) {
-    InputConfigurator.setLogLevel(CLASS, job.getConfiguration(), level);
+    InputConfigurator.setLogLevel(CLASS,job.getConfiguration(),level);
   }
 
   /**
@@ -261,7 +265,8 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
   }
 
   /**
-   * Sets the name of the input table, over which this job will scan.
+   * Sets the name of the input table, over which this job will scan. This method has been deprecated in favor of
+   * {@link InputFormatBase#setInputTableNames(org.apache.hadoop.mapreduce.Job, java.util.Collection)}
    * 
    * @param job
    *          the Hadoop job instance to be configured
@@ -269,26 +274,28 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the table to use when the tablename is null in the write call
    * @since 1.5.0
    */
+  @Deprecated
   public static void setInputTableName(Job job, String tableName) {
-    InputConfigurator.setInputTableName(CLASS, job.getConfiguration(), tableName);
+    InputConfigurator.setInputTableName(CLASS,job.getConfiguration(),tableName);
   }
 
   /**
-   * Gets the table name from the configuration.
+   * Sets the names of the input tables over which this job will scan.
    * 
-   * @param context
-   *          the Hadoop context for the configured job
-   * @return the table name
-   * @since 1.5.0
-   * @see #setInputTableName(Job, String)
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param tableNames
+   *          the table to use when the tablename is null in the write call
+   * @since 1.6.0
    */
-  protected static String getInputTableName(JobContext context) {
-    return InputConfigurator.getInputTableName(CLASS, getConfiguration(context));
+  @Deprecated
+  public static void setInputTableNames(Job job, Collection<String> tableNames) {
+    InputConfigurator.setInputTableNames(CLASS,job.getConfiguration(),tableNames);
   }
 
   /**
    * Sets the {@link Authorizations} used to scan. Must be a subset of the user's authorization. Defaults to the empty set.
-   * 
+   *
    * @param job
    *          the Hadoop job instance to be configured
    * @param auths
@@ -296,12 +303,12 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    */
   public static void setScanAuthorizations(Job job, Authorizations auths) {
-    InputConfigurator.setScanAuthorizations(CLASS, job.getConfiguration(), auths);
+    InputConfigurator.setScanAuthorizations(CLASS,job.getConfiguration(),auths);
   }
 
   /**
    * Gets the authorizations to set for the scans from the configuration.
-   * 
+   *
    * @param context
    *          the Hadoop context for the configured job
    * @return the Accumulo scan authorizations
@@ -309,19 +316,35 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setScanAuthorizations(Job, Authorizations)
    */
   protected static Authorizations getScanAuthorizations(JobContext context) {
-    return InputConfigurator.getScanAuthorizations(CLASS, getConfiguration(context));
+    return InputConfigurator.getScanAuthorizations(CLASS,getConfiguration(context));
   }
 
   /**
-   * Sets the input ranges to scan for this job. If not set, the entire table will be scanned.
-   * 
+   * Sets the input ranges to scan for all tables associated with this job. This will be added to any per-table ranges that have been set using
+   * {@link #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Map)}
+   *
    * @param job
    *          the Hadoop job instance to be configured
    * @param ranges
    *          the ranges that will be mapped over
    * @since 1.5.0
    */
+  @Deprecated
   public static void setRanges(Job job, Collection<Range> ranges) {
+    InputConfigurator.setRanges(CLASS,job.getConfiguration(),ranges);
+  }
+
+  /**
+   * Sets the input ranges to scan per-table for this job.
+   * 
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param ranges
+   *          the per-table ranges that will be mapped over
+   * @since 1.6.0
+   */
+  @Deprecated
+  public static void setRanges(Job job, Map<String,Collection<Range>> ranges) {
     InputConfigurator.setRanges(CLASS, job.getConfiguration(), ranges);
   }
 
@@ -335,13 +358,16 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *           if the ranges have been encoded improperly
    * @since 1.5.0
    * @see #setRanges(Job, Collection)
+   * @see #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Map)
    */
-  protected static List<Range> getRanges(JobContext context) throws IOException {
+  @Deprecated
+  protected static Map<String,List<Range>> getRanges(JobContext context) throws IOException {
     return InputConfigurator.getRanges(CLASS, getConfiguration(context));
   }
 
   /**
-   * Restricts the columns that will be mapped over for this job.
+   * Restricts the columns that will be mapped over for this job for all tables. These columns will be added to any per-table columns set with
+   * {@link #fetchColumns(org.apache.hadoop.mapreduce.Job, java.util.Map)}.
    * 
    * @param job
    *          the Hadoop job instance to be configured
@@ -350,25 +376,44 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          selected. An empty set is the default and is equivalent to scanning the all columns.
    * @since 1.5.0
    */
+  @Deprecated
   public static void fetchColumns(Job job, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     InputConfigurator.fetchColumns(CLASS, job.getConfiguration(), columnFamilyColumnQualifierPairs);
   }
 
   /**
-   * Gets the columns to be mapped over from this job.
+   * Restricts the columns that will be mapped over for this job per table..
    * 
-   * @param context
-   *          the Hadoop context for the configured job
-   * @return a set of columns
-   * @since 1.5.0
-   * @see #fetchColumns(Job, Collection)
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param columnFamilyColumnQualifierPairs
+   *          A map keyed by table name where the value is a pair of {@link Text} objects corresponding to column family and column qualifier. If the column
+   *          qualifier is null, the entire column family is selected. An empty set is the default and is equivalent to scanning the all columns.
+   * @since 1.6.0
    */
-  protected static Set<Pair<Text,Text>> getFetchedColumns(JobContext context) {
-    return InputConfigurator.getFetchedColumns(CLASS, getConfiguration(context));
+  @Deprecated
+  public static void fetchColumns(Job job, Map<String,Collection<Pair<Text,Text>>> columnFamilyColumnQualifierPairs) {
+    InputConfigurator.fetchColumns(CLASS,job.getConfiguration(),columnFamilyColumnQualifierPairs);
   }
 
   /**
-   * Encode an iterator on the input for this job.
+   * Gets the columns to be mapped over from this job. Any default columns as well as per-table columns will be returned.
+   * 
+   * @param context
+   *          the Hadoop context for the configured job
+   * @param table
+   *          the table for which to return the columns
+   * @return a set of columns
+   * @since 1.6.0
+   * @see #fetchColumns(Job, Collection)
+   */
+  @Deprecated
+  protected static Set<Pair<Text,Text>> getFetchedColumns(JobContext context, String table) {
+    return InputConfigurator.getFetchedColumns(CLASS,getConfiguration(context),table);
+  }
+
+  /**
+   * Encode an iterator on the default all tables for this job.
    * 
    * @param job
    *          the Hadoop job instance to be configured
@@ -376,12 +421,47 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the configuration of the iterator
    * @since 1.5.0
    */
+  @Deprecated
   public static void addIterator(Job job, IteratorSetting cfg) {
-    InputConfigurator.addIterator(CLASS, job.getConfiguration(), cfg);
+    InputConfigurator.addIterator(CLASS,job.getConfiguration(),cfg);
   }
 
   /**
-   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration.
+   * Encode an iterator on the input for this job for the specified table.
+   * 
+   * @param job
+   *          the Hadoop job instance to be configured
+   * @param table
+   *          the table for which to add the iterator
+   * @param cfg
+   *          the configuration of the iterator
+   * @since 1.6.0
+   */
+  @Deprecated
+  public static void addIterator(Job job, String table, IteratorSetting cfg) {
+    InputConfigurator.addIterator(CLASS, job.getConfiguration(), table, cfg);
+  }
+
+  /**
+   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration for the specific table. Any default iterators will be
+   * included in the return.
+   * 
+   * @param context
+   *          the Hadoop context for the configured job
+   * @param table
+   *          the table for which to return the iterators
+   * @return a list of iterators for the given table
+   * @since 1.6.0
+   * @see #addIterator(Job, String, IteratorSetting)
+   */
+  @Deprecated
+  protected static List<IteratorSetting> getIterators(JobContext context, String table) {
+    return InputConfigurator.getIterators(CLASS, getConfiguration(context), table);
+  }
+
+  /**
+   * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration. This will only return iterators that have not been set
+   * for a specific table.
    * 
    * @param context
    *          the Hadoop context for the configured job
@@ -389,8 +469,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    * @see #addIterator(Job, IteratorSetting)
    */
+  @Deprecated
   protected static List<IteratorSetting> getIterators(JobContext context) {
-    return InputConfigurator.getIterators(CLASS, getConfiguration(context));
+    return InputConfigurator.getDefaultIterators(CLASS,getConfiguration(context));
   }
 
   /**
@@ -407,6 +488,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @see #setRanges(Job, Collection)
    * @since 1.5.0
    */
+  @Deprecated
   public static void setAutoAdjustRanges(Job job, boolean enableFeature) {
     InputConfigurator.setAutoAdjustRanges(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -420,8 +502,23 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    * @see #setAutoAdjustRanges(Job, boolean)
    */
+  @Deprecated
   protected static boolean getAutoAdjustRanges(JobContext context) {
     return InputConfigurator.getAutoAdjustRanges(CLASS, getConfiguration(context));
+  }
+
+
+  protected static void setTableQueryConfigurations(JobContext job, TableQueryConfig... configs) {
+    checkNotNull(configs);
+    InputConfigurator.setTableQueryConfiguration(CLASS, getConfiguration(job), configs);
+  }
+
+  public static List<TableQueryConfig> getTableQueryConfigurations(JobContext job) {
+    return InputConfigurator.getTableQueryConfigurations(CLASS, getConfiguration(job));
+  }
+
+  protected static TableQueryConfig getTableQueryConfiguration(JobContext job, String tableName) {
+    return InputConfigurator.getTableQueryConfiguration(CLASS, getConfiguration(job), tableName);
   }
 
   /**
@@ -536,13 +633,15 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * 
    * @param context
    *          the Hadoop context for the configured job
+   * @param table
+   *          the table for which to initialize the locator
    * @return an Accumulo tablet locator
    * @throws TableNotFoundException
    *           if the table name set on the configuration doesn't exist
    * @since 1.5.0
    */
-  protected static TabletLocator getTabletLocator(JobContext context) throws TableNotFoundException {
-    return InputConfigurator.getTabletLocator(CLASS, getConfiguration(context));
+  protected static TabletLocator getTabletLocator(JobContext context, String table) throws TableNotFoundException {
+    return InputConfigurator.getTabletLocator(CLASS, getConfiguration(context), table);
   }
 
   // InputFormat doesn't have the equivalent of OutputFormat's checkOutputSpecs(JobContext job)
@@ -577,42 +676,60 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
     protected RangeInputSplit split;
 
     /**
-     * Apply the configured iterators from the configuration to the scanner.
+     * Apply the configured iterators from the configuration to the scanner. This applies both the
+     * default iterators and the per-table iterators.
      * 
      * @param context
      *          the Hadoop context for the configured job
      * @param scanner
      *          the scanner to configure
+     *  @param tableName
+     *          the table name for which to set up the iterators
      */
-    protected void setupIterators(TaskAttemptContext context, Scanner scanner) {
-      List<IteratorSetting> iterators = getIterators(context);
-      for (IteratorSetting iterator : iterators) {
+    protected void setupIterators(TaskAttemptContext context, Scanner scanner, String tableName) {
+      List<IteratorSetting> iterators = getIterators(context, tableName); // default iterators will be included
+      for (IteratorSetting iterator : iterators)
         scanner.addScanIterator(iterator);
-      }
     }
+
 
     /**
      * Initialize a scanner over the given input split using this task attempt configuration.
      */
     @Override
     public void initialize(InputSplit inSplit, TaskAttemptContext attempt) throws IOException {
+
       Scanner scanner;
       split = (RangeInputSplit) inSplit;
-      log.debug("Initializing input split: " + split.range);
+      log.debug("Initializing input split: " + split.getRange());
       Instance instance = getInstance(attempt);
       String principal = getPrincipal(attempt);
+
+      TableQueryConfig tableConfig = getTableQueryConfiguration(attempt, split.getTableName());
+
+      // in case the table name changed, we can still use the previous name for terms of configuration,
+      // but for the scanner, we'll need to reference the new table name.
+      String actualNameForId = null;
+      try{
+        actualNameForId = Tables.getTableName(instance, split.getTableId());
+        if(!actualNameForId.equals(split.getTableName()))
+          log.debug("Table name changed from " + split.getTableName() + " to " + actualNameForId);
+      }catch(TableNotFoundException e){
+        throw new IOException("The specified table was not found for id=" + split.getTableId());
+      }
+
       AuthenticationToken token = getAuthenticationToken(attempt);
       Authorizations authorizations = getScanAuthorizations(attempt);
-
       try {
         log.debug("Creating connector with user: " + principal);
+
         Connector conn = instance.getConnector(principal, token);
-        log.debug("Creating scanner for table: " + getInputTableName(attempt));
+        log.debug("Creating scanner for table: " + actualNameForId);
         log.debug("Authorizations are: " + authorizations);
         if (isOfflineScan(attempt)) {
-          scanner = new OfflineScanner(instance, new Credentials(principal, token), Tables.getTableId(instance, getInputTableName(attempt)), authorizations);
+          scanner = new OfflineScanner(instance, new Credentials(principal, token), split.getTableId(), authorizations);
         } else {
-          scanner = conn.createScanner(getInputTableName(attempt), authorizations);
+          scanner = conn.createScanner(actualNameForId, authorizations);
         }
         if (isIsolated(attempt)) {
           log.info("Creating isolated scanner");
@@ -622,13 +739,13 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
           log.info("Using local iterators");
           scanner = new ClientSideIteratorScanner(scanner);
         }
-        setupIterators(attempt, scanner);
+        setupIterators(attempt, scanner, split.getTableName());
       } catch (Exception e) {
         throw new IOException(e);
       }
 
       // setup a scanner within the bounds of this split
-      for (Pair<Text,Text> c : getFetchedColumns(attempt)) {
+      for (Pair<Text,Text> c : tableConfig.getColumns()) {
         if (c.getSecond() != null) {
           log.debug("Fetching column " + c.getFirst() + ":" + c.getSecond());
           scanner.fetchColumn(c.getFirst(), c.getSecond());
@@ -638,8 +755,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
         }
       }
 
-      scanner.setRange(split.range);
-
+      scanner.setRange(split.getRange());
       numKeysRead = 0;
 
       // do this last after setting all scanner options
@@ -705,9 +821,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
       scanner.setRange(metadataRange);
 
       RowIterator rowIter = new RowIterator(scanner);
-
       KeyExtent lastExtent = null;
-
       while (rowIter.hasNext()) {
         Iterator<Entry<Key,Value>> row = rowIter.next();
         String last = "";
@@ -771,96 +885,104 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
   }
 
   /**
-   * Read the metadata table to get tablets and match up ranges to them.
+   * Gets the splits of the tables that have been set on the job.
+   *
+   * @param conf
+   *          the configuration of the job
+   * @return  the splits from the tables based on the ranges.
+   * @throws IOException
+   *          if a table set on the job doesn't exist or an error occurs
+   *          initializing the tablet locator
    */
-  @Override
-  public List<InputSplit> getSplits(JobContext context) throws IOException {
-    log.setLevel(getLogLevel(context));
-    validateOptions(context);
+  public List<InputSplit> getSplits(JobContext conf) throws IOException {
+    log.setLevel(getLogLevel(conf));
+    validateOptions(conf);
 
-    String tableName = getInputTableName(context);
-    boolean autoAdjust = getAutoAdjustRanges(context);
-    List<Range> ranges = autoAdjust ? Range.mergeOverlapping(getRanges(context)) : getRanges(context);
+    LinkedList<InputSplit> splits = new LinkedList<InputSplit>();
+    List<TableQueryConfig> tableConfigs = getTableQueryConfigurations(conf);
+    for (TableQueryConfig tableConfig : tableConfigs) {
 
-    if (ranges.isEmpty()) {
-      ranges = new ArrayList<Range>(1);
-      ranges.add(new Range());
-    }
+      boolean autoAdjust = getAutoAdjustRanges(conf); // TODO: Put this in the table config object
+      String tableId = null;
+      List<Range> ranges = autoAdjust ? Range.mergeOverlapping(tableConfig.getRanges()) : tableConfig.getRanges();
+      if (ranges.isEmpty()) {
+        ranges = new ArrayList<Range>(1);
+        ranges.add(new Range());
+      }
 
-    // get the metadata information for these ranges
-    Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
-    TabletLocator tl;
-    try {
-      if (isOfflineScan(context)) {
-        binnedRanges = binOfflineTable(context, tableName, ranges);
-        while (binnedRanges == null) {
-          // Some tablets were still online, try again
-          UtilWaitThread.sleep(100 + (int) (Math.random() * 100)); // sleep randomly between 100 and 200 ms
-          binnedRanges = binOfflineTable(context, tableName, ranges);
-        }
-      } else {
-        Instance instance = getInstance(context);
-        String tableId = null;
-        tl = getTabletLocator(context);
-        // its possible that the cache could contain complete, but old information about a tables tablets... so clear it
-        tl.invalidateCache();
-        while (!tl.binRanges(new Credentials(getPrincipal(context), getAuthenticationToken(context)), ranges, binnedRanges).isEmpty()) {
-          if (!(instance instanceof MockInstance)) {
-            if (tableId == null)
-              tableId = Tables.getTableId(instance, tableName);
-            if (!Tables.exists(instance, tableId))
-              throw new TableDeletedException(tableId);
-            if (Tables.getTableState(instance, tableId) == TableState.OFFLINE)
-              throw new TableOfflineException(instance, tableId);
+      // get the metadata information for these ranges
+      Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
+      TabletLocator tl;
+      try {
+        if (isOfflineScan(conf)) {
+          binnedRanges = binOfflineTable(conf, tableConfig.getTableName(), ranges);
+          while (binnedRanges == null) {
+            // Some tablets were still online, try again
+            UtilWaitThread.sleep(100 + (int) (Math.random() * 100)); // sleep randomly between 100 and 200 ms
+            binnedRanges = binOfflineTable(conf, tableConfig.getTableName(), ranges);
+
           }
-          binnedRanges.clear();
-          log.warn("Unable to locate bins for specified ranges. Retrying.");
-          UtilWaitThread.sleep(100 + (int) (Math.random() * 100)); // sleep randomly between 100 and 200 ms
+        } else {
+          Instance instance = getInstance(conf);
+          tl = getTabletLocator(conf, tableConfig.getTableName());
+          // its possible that the cache could contain complete, but old information about a tables tablets... so clear it
           tl.invalidateCache();
+          Credentials creds = new Credentials(getPrincipal(conf), getAuthenticationToken(conf));
+
+          while (!tl.binRanges(creds, ranges, binnedRanges).isEmpty()) {
+            if (!(instance instanceof MockInstance)) {
+              if (!Tables.exists(instance, tableId))
+                throw new TableDeletedException(tableId);
+              if (Tables.getTableState(instance, tableId) == TableState.OFFLINE)
+                throw new TableOfflineException(instance, tableId);
+              tableId = Tables.getTableId(instance, tableConfig.getTableName());
+            }
+            binnedRanges.clear();
+            log.warn("Unable to locate bins for specified ranges. Retrying.");
+            UtilWaitThread.sleep(100 + (int) (Math.random() * 100)); // sleep randomly between 100 and 200 ms
+            tl.invalidateCache();
+          }
         }
-      }
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
-
-    ArrayList<InputSplit> splits = new ArrayList<InputSplit>(ranges.size());
-    HashMap<Range,ArrayList<String>> splitsToAdd = null;
-
-    if (!autoAdjust)
-      splitsToAdd = new HashMap<Range,ArrayList<String>>();
-
-    HashMap<String,String> hostNameCache = new HashMap<String,String>();
-
-    for (Entry<String,Map<KeyExtent,List<Range>>> tserverBin : binnedRanges.entrySet()) {
-      String ip = tserverBin.getKey().split(":", 2)[0];
-      String location = hostNameCache.get(ip);
-      if (location == null) {
-        InetAddress inetAddress = InetAddress.getByName(ip);
-        location = inetAddress.getHostName();
-        hostNameCache.put(ip, location);
+      } catch (Exception e) {
+        throw new IOException(e);
       }
 
-      for (Entry<KeyExtent,List<Range>> extentRanges : tserverBin.getValue().entrySet()) {
-        Range ke = extentRanges.getKey().toDataRange();
-        for (Range r : extentRanges.getValue()) {
-          if (autoAdjust) {
-            // divide ranges into smaller ranges, based on the tablets
-            splits.add(new RangeInputSplit(tableName, ke.clip(r), new String[] {location}));
-          } else {
-            // don't divide ranges
-            ArrayList<String> locations = splitsToAdd.get(r);
-            if (locations == null)
-              locations = new ArrayList<String>(1);
-            locations.add(location);
-            splitsToAdd.put(r, locations);
+      HashMap<Range,ArrayList<String>> splitsToAdd = null;
+
+      if (!autoAdjust)
+        splitsToAdd = new HashMap<Range,ArrayList<String>>();
+
+      HashMap<String,String> hostNameCache = new HashMap<String,String>();
+      for (Entry<String,Map<KeyExtent,List<Range>>> tserverBin : binnedRanges.entrySet()) {
+        String ip = tserverBin.getKey().split(":", 2)[0];
+        String location = hostNameCache.get(ip);
+        if (location == null) {
+          InetAddress inetAddress = InetAddress.getByName(ip);
+          location = inetAddress.getHostName();
+          hostNameCache.put(ip, location);
+        }
+        for (Entry<KeyExtent,List<Range>> extentRanges : tserverBin.getValue().entrySet()) {
+          Range ke = extentRanges.getKey().toDataRange();
+          for (Range r : extentRanges.getValue()) {
+            if (autoAdjust) {
+              // divide ranges into smaller ranges, based on the tablets
+              splits.add(new RangeInputSplit(tableConfig.getTableName(), tableId, ke.clip(r), new String[] {location}));
+            } else {
+              // don't divide ranges
+              ArrayList<String> locations = splitsToAdd.get(r);
+              if (locations == null)
+                locations = new ArrayList<String>(1);
+              locations.add(location);
+              splitsToAdd.put(r, locations);
+            }
           }
         }
       }
-    }
 
-    if (!autoAdjust)
-      for (Entry<Range,ArrayList<String>> entry : splitsToAdd.entrySet())
-        splits.add(new RangeInputSplit(tableName, entry.getKey(), entry.getValue().toArray(new String[0])));
+      if (!autoAdjust)
+        for (Entry<Range,ArrayList<String>> entry : splitsToAdd.entrySet())
+          splits.add(new RangeInputSplit(tableConfig.getTableName(), tableId, entry.getKey(), entry.getValue().toArray(new String[0])));
+    }
     return splits;
   }
 
@@ -870,20 +992,27 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
   public static class RangeInputSplit extends InputSplit implements Writable {
     private Range range;
     private String[] locations;
+    private String tableId;
+    private String tableName;
 
     public RangeInputSplit() {
       range = new Range();
       locations = new String[0];
+      tableId = "";
+      tableName = "";
     }
 
     public RangeInputSplit(RangeInputSplit split) throws IOException {
       this.setRange(split.getRange());
       this.setLocations(split.getLocations());
+      this.setTableName(split.getTableName());
     }
 
-    protected RangeInputSplit(String table, Range range, String[] locations) {
+    protected RangeInputSplit(String table, String tableId, Range range, String[] locations) {
       this.range = range;
       this.locations = locations;
+      this.tableName = table;
+      this.tableId = tableId;
     }
 
     public Range getRange() {
@@ -892,6 +1021,22 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
 
     public void setRange(Range range) {
       this.range = range;
+    }
+
+    public String getTableName() {
+      return tableName;
+    }
+
+    public void setTableName(String tableName) {
+      this.tableName = tableName;
+    }
+
+    public void setTableId(String tableId) {
+      this.tableId = tableId;
+    }
+
+    public String getTableId() {
+      return tableId;
     }
 
     private static byte[] extractBytes(ByteSequence seq, int numBytes) {
@@ -968,6 +1113,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
     @Override
     public void readFields(DataInput in) throws IOException {
       range.readFields(in);
+      tableName = in.readUTF();
       int numLocs = in.readInt();
       locations = new String[numLocs];
       for (int i = 0; i < numLocs; ++i)
@@ -977,6 +1123,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
     @Override
     public void write(DataOutput out) throws IOException {
       range.write(out);
+      out.writeUTF(tableName);
       out.writeInt(locations.length);
       for (int i = 0; i < locations.length; ++i)
         out.writeUTF(locations[i]);

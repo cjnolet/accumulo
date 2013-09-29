@@ -17751,7 +17751,7 @@ import org.slf4j.LoggerFactory;
             return CREDENTIALS;
           case 2: // PRINCIPAL
             return PRINCIPAL;
-          case 3: // TABLE_NAME
+          case 3: // TABLE
             return TABLE_NAME;
           case 4: // TBL_PERM
             return TBL_PERM;
@@ -18329,7 +18329,7 @@ import org.slf4j.LoggerFactory;
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 3: // TABLE_NAME
+            case 3: // TABLE
               if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
                 struct.tableName = iprot.readString();
                 struct.setTableNameIsSet(true);
@@ -21107,7 +21107,7 @@ import org.slf4j.LoggerFactory;
             return CREDENTIALS;
           case 2: // PRINCIPAL
             return PRINCIPAL;
-          case 3: // TABLE_NAME
+          case 3: // TABLE
             return TABLE_NAME;
           case 4: // PERMISSION
             return PERMISSION;
@@ -21685,7 +21685,7 @@ import org.slf4j.LoggerFactory;
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 3: // TABLE_NAME
+            case 3: // TABLE
               if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
                 struct.tableName = iprot.readString();
                 struct.setTableNameIsSet(true);
@@ -22327,7 +22327,7 @@ import org.slf4j.LoggerFactory;
             return CREDENTIALS;
           case 2: // PRINCIPAL
             return PRINCIPAL;
-          case 3: // TABLE_NAME
+          case 3: // TABLE
             return TABLE_NAME;
           case 4: // PERMISSION
             return PERMISSION;
@@ -22905,7 +22905,7 @@ import org.slf4j.LoggerFactory;
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 3: // TABLE_NAME
+            case 3: // TABLE
               if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
                 struct.tableName = iprot.readString();
                 struct.setTableNameIsSet(true);
@@ -24536,7 +24536,7 @@ import org.slf4j.LoggerFactory;
             return TINFO;
           case 3: // CREDENTIALS
             return CREDENTIALS;
-          case 2: // TABLE_NAME
+          case 2: // TABLE
             return TABLE_NAME;
           default:
             return null;
@@ -24960,7 +24960,7 @@ import org.slf4j.LoggerFactory;
                 org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
               }
               break;
-            case 2: // TABLE_NAME
+            case 2: // TABLE
               if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
                 struct.tableName = iprot.readString();
                 struct.setTableNameIsSet(true);
