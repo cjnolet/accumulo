@@ -276,11 +276,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setInputTableName(JobConf, String)
    */
   protected static String getInputTableName(JobConf job) {
-    String[] tableNames = InputConfigurator.getInputTableNames(CLASS, job);
-    if (tableNames.length > 0)
-      return tableNames[0];
-    else
-      return null;
+    return InputConfigurator.getInputTableName(CLASS, job);
   }
 
   /**
@@ -334,12 +330,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setRanges(JobConf, Collection)
    */
   protected static List<Range> getRanges(JobConf job) throws IOException {
-    Map<String, List<Range>> tableRanges = InputConfigurator.getRanges(CLASS,job);
-    List<Range> ranges = tableRanges.get(getInputTableName(job));
-    if(ranges != null)
-      return ranges;
-    else
-      return new LinkedList<Range>();
+    return InputConfigurator.getRanges(CLASS,job);
   }
 
   /**
@@ -366,7 +357,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #fetchColumns(JobConf, Collection)
    */
   protected static Set<Pair<Text,Text>> getFetchedColumns(JobConf job) {
-    return InputConfigurator.getFetchedColumns(CLASS, job, getInputTableName(job));
+    return InputConfigurator.getFetchedColumns(CLASS, job);
   }
 
   /**
@@ -392,7 +383,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #addIterator(JobConf, IteratorSetting)
    */
   protected static List<IteratorSetting> getIterators(JobConf job) {
-    return InputConfigurator.getDefaultIterators(CLASS,job);
+    return InputConfigurator.getIterators(CLASS,job);
   }
 
   /**

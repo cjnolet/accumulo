@@ -311,127 +311,25 @@ public class AccumuloInputFormatTest {
     assertNull(e2);
   }
 
-  /**
-   * Asserts that the configuration contains the expected ranges for the tables.
-   */
   @Test
-  public void testMultitableRangeSerialization() throws Throwable {
-    List<String> tables = Arrays.asList("t1", "t2", "t3");
-    Job job = new Job(new Configuration());
-    job.setInputFormatClass(AccumuloInputFormat.class);
-    job.setMapperClass(MRTester.TestMapper.class);
-    job.setNumReduceTasks(0);
-    AccumuloInputFormat.setConnectorInfo(job, "root", new PasswordToken(new byte[0]));
-    AccumuloInputFormat.setScanAuthorizations(job, new Authorizations());
-    AccumuloInputFormat.setMockInstance(job, "testmapinstance");
+  public void testTableQueryConfigSerialization() throws IOException{
 
-    HashMap<String,Collection<Range>> tblRanges = new HashMap<String,Collection<Range>>();
-    for (String tbl : tables) {
-      List<Range> ranges = Arrays.asList(new Range("a", "b"), new Range("c", "d"), new Range("e", "f"));
-      tblRanges.put(tbl, ranges);
-    }
+    Job job = new Job();
 
-    Range defaultRange = new Range("0", "1");
+    TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1)
+            .setRanges(Collections.singletonList(new Range("a", "b")))
+            .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+            .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
 
-    try {
-      AccumuloInputFormat.setRanges(job, tblRanges);
-      fail("Exception should have been thrown.");
-    } catch(IllegalStateException e) {}
+    TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2)
+            .setRanges(Collections.singletonList(new Range("a", "b")))
+            .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+            .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
 
-    AccumuloInputFormat.setInputTableNames(job, tables);
+    AccumuloInputFormat.setTableQueryConfigurations(job, table1, table2);
 
-    // set a default range
-    AccumuloInputFormat.setRanges(job, Collections.singleton(defaultRange));
-    AccumuloInputFormat.setRanges(job, tblRanges);
-    Map<String,List<Range>> configuredRanges = AccumuloInputFormat.getRanges(job);
-
-    for (Map.Entry<String,List<Range>> cfgRange : configuredRanges.entrySet()) {
-      String tbl = cfgRange.getKey();
-      HashSet<Range> originalRanges = new HashSet<Range>(tblRanges.remove(tbl));
-      originalRanges.add(defaultRange);
-      HashSet<Range> retrievedRanges = new HashSet<Range>(cfgRange.getValue());
-      assertEquals(originalRanges.size(), retrievedRanges.size());
-      assertTrue(originalRanges.containsAll(retrievedRanges));
-      assertTrue(retrievedRanges.containsAll(originalRanges));
-    }
+    assertEquals(table1, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_1));
+    assertEquals(table2, AccumuloInputFormat.getTableQueryConfiguration(job, TEST_TABLE_2));
   }
 
-  /**
-   * Asserts that the configuration contains the expected iterators for the tables.
-   */
-  @Test
-  public void testMultitableIteratorSerialization() throws Throwable {
-    HashSet<String> tables = new HashSet<String>(Arrays.asList("t1", "t2"));
-    Job job = new Job(new Configuration());
-    job.setInputFormatClass(AccumuloInputFormat.class);
-    job.setMapperClass(MRTester.TestMapper.class);
-    job.setNumReduceTasks(0);
-    AccumuloInputFormat.setConnectorInfo(job, "root", new PasswordToken(new byte[0]));
-    AccumuloInputFormat.setScanAuthorizations(job, new Authorizations());
-
-    // create + set iterators on configuration and build expected reference set
-    IteratorSetting isetting1 = new IteratorSetting(1, "name1", "class1");
-    IteratorSetting isetting2 = new IteratorSetting(2, "name2", "class2");
-    IteratorSetting isetting3 = new IteratorSetting(2, "name3", "class3");
-
-    try {
-      AccumuloInputFormat.addIterator(job, "t1", isetting1);
-      fail("Exception should have been thrown.");
-    } catch(IllegalStateException e) {}
-
-    AccumuloInputFormat.setInputTableNames(job, tables);
-
-    AccumuloInputFormat.addIterator(job, "t1", isetting1);
-    AccumuloInputFormat.addIterator(job, "t2", isetting2);
-    AccumuloInputFormat.addIterator(job, isetting3);
-
-    // verify per-table iterators
-    List<IteratorSetting> t1iters = AccumuloInputFormat.getIterators(job, "t1");
-    List<IteratorSetting> t2iters = AccumuloInputFormat.getIterators(job, "t2");
-    assertFalse(t1iters.isEmpty());
-    assertEquals(isetting1, t1iters.get(1));
-    assertEquals(isetting3, t1iters.get(0));
-    assertEquals(isetting2, t2iters.get(1));
-    assertEquals(isetting3, t2iters.get(0));
-  }
-
-  @Test
-  public void testMultitableColumnSerialization() throws IOException, AccumuloSecurityException {
-    HashSet<String> tables = new HashSet<String>(Arrays.asList("t1", "t2"));
-    Job job = new Job(new Configuration());
-    job.setInputFormatClass(AccumuloInputFormat.class);
-    job.setMapperClass(MRTester.TestMapper.class);
-    job.setNumReduceTasks(0);
-    AccumuloInputFormat.setConnectorInfo(job, "root", new PasswordToken(new byte[0]));
-
-    AccumuloInputFormat.setScanAuthorizations(job, new Authorizations());
-
-    Map<String,Collection<Pair<Text,Text>>> columns = new HashMap<String,Collection<Pair<Text,Text>>>();
-    HashSet<Pair<Text,Text>> t1cols = new HashSet<Pair<Text,Text>>();
-    t1cols.add(new Pair(new Text("a"), new Text("b")));
-    HashSet<Pair<Text,Text>> t2cols = new HashSet<Pair<Text,Text>>();
-    t2cols.add(new Pair(new Text("b"), new Text("c")));
-    columns.put("t1", t1cols);
-    columns.put("t2", t2cols);
-
-    Pair<Text,Text> defaultColumn = new Pair(new Text("c"), new Text("d"));
-
-    try {
-      AccumuloInputFormat.fetchColumns(job, columns);
-      fail("Exception should have been thrown.");
-    } catch(IllegalStateException e) {}
-
-    AccumuloInputFormat.setInputTableNames(job, tables);
-
-    AccumuloInputFormat.fetchColumns(job, Collections.singleton(defaultColumn));
-    AccumuloInputFormat.fetchColumns(job, columns);
-
-    columns.get("t1").add(defaultColumn);
-    columns.get("t2").add(defaultColumn);
-
-    Collection<Pair<Text,Text>> t1actual = AccumuloInputFormat.getFetchedColumns(job, "t1");
-    assertEquals(columns.get("t1"), t1actual);
-    Collection<Pair<Text,Text>> t2actual = AccumuloInputFormat.getFetchedColumns(job, "t2");
-    assertEquals(columns.get("t2"), t2actual);
-  }
 }

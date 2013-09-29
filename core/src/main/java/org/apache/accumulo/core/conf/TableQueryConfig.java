@@ -27,6 +27,7 @@ public class TableQueryConfig implements Writable {
   private boolean autoAdjustRanges = true;
   private boolean useLocalIterators = false;
   private boolean useIsolatedScanners = false;
+  private boolean offlineScan = false;
   
   public TableQueryConfig(String tableName) {
     checkNotNull(tableName);
@@ -67,20 +68,29 @@ public class TableQueryConfig implements Writable {
     return this;
   }
 
+  public boolean isOfflineScan(){
+    return offlineScan;
+  }
+
+  public TableQueryConfig setOfflineScan(boolean offlineScan){
+    this.offlineScan=offlineScan;
+    return this;
+  }
+
   public String getTableName(){
     return tableName;
   }
 
   public List<IteratorSetting> getIterators(){
-    return iterators;
+    return iterators != null ? iterators : new ArrayList<IteratorSetting>();
   }
 
   public List<Range> getRanges(){
-    return ranges;
+    return ranges != null ? ranges : new ArrayList<Range>();
   }
 
   public Set<Pair<Text,Text>> getColumns(){
-    return columns;
+    return columns != null ? columns : new HashSet<Pair<Text,Text>>();
   }
 
   public boolean shouldAutoAdjustRanges(){
@@ -179,6 +189,9 @@ public class TableQueryConfig implements Writable {
     TableQueryConfig that=(TableQueryConfig)o;
 
     if(autoAdjustRanges!=that.autoAdjustRanges) return false;
+    if(offlineScan!=that.offlineScan) return false;
+    if(useIsolatedScanners!=that.useIsolatedScanners) return false;
+    if(useLocalIterators!=that.useLocalIterators) return false;
     if(columns!=null?!columns.equals(that.columns):that.columns!=null) return false;
     if(iterators!=null?!iterators.equals(that.iterators):that.iterators!=null) return false;
     if(ranges!=null?!ranges.equals(that.ranges):that.ranges!=null) return false;
@@ -194,6 +207,9 @@ public class TableQueryConfig implements Writable {
     result=31*result+(ranges!=null?ranges.hashCode():0);
     result=31*result+(columns!=null?columns.hashCode():0);
     result=31*result+(autoAdjustRanges?1:0);
+    result=31*result+(useLocalIterators?1:0);
+    result=31*result+(useIsolatedScanners?1:0);
+    result=31*result+(offlineScan?1:0);
     return result;
   }
 }
