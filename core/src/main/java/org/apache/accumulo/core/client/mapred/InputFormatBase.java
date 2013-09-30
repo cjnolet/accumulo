@@ -133,7 +133,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #setConnectorInfo(JobConf, String, AuthenticationToken)
    */
   protected static Boolean isConnectorInfoSet(JobConf job) {
-    return InputConfigurator.isConnectorInfoSet(CLASS,job);
+    return InputConfigurator.isConnectorInfoSet(CLASS, job);
   }
 
   /**
@@ -314,7 +314,6 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    *          the ranges that will be mapped over
    * @since 1.5.0
    */
-  @Deprecated
   public static void setRanges(JobConf job, Collection<Range> ranges) {
     InputConfigurator.setRanges(CLASS, job, ranges);
   }
@@ -330,9 +329,8 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @since 1.5.0
    * @see #setRanges(JobConf, Collection)
    */
-  @Deprecated
   protected static List<Range> getRanges(JobConf job) throws IOException {
-    return InputConfigurator.getRanges(CLASS,job);
+    return InputConfigurator.getRanges(CLASS, job);
   }
 
   /**
@@ -385,7 +383,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * @see #addIterator(JobConf, IteratorSetting)
    */
   protected static List<IteratorSetting> getIterators(JobConf job) {
-    return InputConfigurator.getIterators(CLASS,job);
+    return InputConfigurator.getIterators(CLASS, job);
   }
 
   /**
@@ -568,7 +566,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
     protected long numKeysRead;
     protected Iterator<Entry<Key,Value>> scannerIterator;
     protected RangeInputSplit split;
-
+  
     /**
      * Apply the configured iterators from the configuration to the scanner.
      * 
@@ -583,7 +581,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         scanner.addScanIterator(iterator);
       }
     }
-
+  
     /**
      * Initialize a scanner over the given input split using this task attempt configuration.
      */
@@ -595,11 +593,11 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       String user = getPrincipal(job);
       AuthenticationToken token = getAuthenticationToken(job);
       Authorizations authorizations = getScanAuthorizations(job);
-
+    
       // in case the table name changed, we can still use the previous name for terms of configuration,
       // but for the scanner, we'll need to reference the new table name.
       String actualNameForId = split.getTableName();
-      if(!(instance instanceof MockInstance)) {
+      if (!(instance instanceof MockInstance)) {
         try {
           actualNameForId = Tables.getTableName(instance, split.getTableId());
           if (!actualNameForId.equals(split.getTableName()))
@@ -608,7 +606,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
           throw new IOException("The specified table was not found for id=" + split.getTableId());
         }
       }
-
+    
       try {
         log.debug("Creating connector with user: " + user);
         Connector conn = instance.getConnector(user, token);
@@ -631,7 +629,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       } catch (Exception e) {
         throw new IOException(e);
       }
-
+    
       // setup a scanner within the bounds of this split
       for (Pair<Text,Text> c : getFetchedColumns(job)) {
         if (c.getSecond() != null) {
@@ -642,58 +640,58 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
           scanner.fetchColumnFamily(c.getFirst());
         }
       }
-
+    
       scanner.setRange(split.getRange());
-
+    
       numKeysRead = 0;
-
+    
       // do this last after setting all scanner options
       scannerIterator = scanner.iterator();
     }
-
+  
     @Override
     public void close() {}
-
+  
     @Override
     public long getPos() throws IOException {
       return numKeysRead;
     }
-
+  
     @Override
     public float getProgress() throws IOException {
       if (numKeysRead > 0 && currentKey == null)
         return 1.0f;
       return split.getProgress(currentKey);
     }
-
+  
     protected Key currentKey = null;
-
+  
   }
 
   Map<String,Map<KeyExtent,List<Range>>> binOfflineTable(JobConf job, String tableName, List<Range> ranges) throws TableNotFoundException, AccumuloException,
       AccumuloSecurityException {
-
+  
     Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
-
+  
     Instance instance = getInstance(job);
     Connector conn = instance.getConnector(getPrincipal(job), getAuthenticationToken(job));
     String tableId = Tables.getTableId(instance, tableName);
-
+  
     if (Tables.getTableState(instance, tableId) != TableState.OFFLINE) {
       Tables.clearCache(instance);
       if (Tables.getTableState(instance, tableId) != TableState.OFFLINE) {
         throw new AccumuloException("Table is online " + tableName + "(" + tableId + ") cannot scan table in offline mode ");
       }
     }
-
+  
     for (Range range : ranges) {
       Text startRow;
-
+    
       if (range.getStartKey() != null)
         startRow = range.getStartKey().getRow();
       else
         startRow = new Text();
-
+    
       Range metadataRange = new Range(new KeyExtent(new Text(tableId), startRow, null).getMetadataEntry(), true, null, false);
       Scanner scanner = conn.createScanner(MetadataTable.NAME, Authorizations.EMPTY);
       TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.fetch(scanner);
@@ -701,70 +699,70 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       scanner.fetchColumnFamily(TabletsSection.CurrentLocationColumnFamily.NAME);
       scanner.fetchColumnFamily(TabletsSection.FutureLocationColumnFamily.NAME);
       scanner.setRange(metadataRange);
-
+    
       RowIterator rowIter = new RowIterator(scanner);
-
+    
       KeyExtent lastExtent = null;
-
+    
       while (rowIter.hasNext()) {
         Iterator<Entry<Key,Value>> row = rowIter.next();
         String last = "";
         KeyExtent extent = null;
         String location = null;
-
+      
         while (row.hasNext()) {
           Entry<Key,Value> entry = row.next();
           Key key = entry.getKey();
-
+        
           if (key.getColumnFamily().equals(TabletsSection.LastLocationColumnFamily.NAME)) {
             last = entry.getValue().toString();
           }
-
+        
           if (key.getColumnFamily().equals(TabletsSection.CurrentLocationColumnFamily.NAME)
               || key.getColumnFamily().equals(TabletsSection.FutureLocationColumnFamily.NAME)) {
             location = entry.getValue().toString();
           }
-
+        
           if (TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.hasColumns(key)) {
             extent = new KeyExtent(key.getRow(), entry.getValue());
           }
-
+        
         }
-
+      
         if (location != null)
           return null;
-
+      
         if (!extent.getTableId().toString().equals(tableId)) {
           throw new AccumuloException("Saw unexpected table Id " + tableId + " " + extent);
         }
-
+      
         if (lastExtent != null && !extent.isPreviousExtent(lastExtent)) {
           throw new AccumuloException(" " + lastExtent + " is not previous extent " + extent);
         }
-
+      
         Map<KeyExtent,List<Range>> tabletRanges = binnedRanges.get(last);
         if (tabletRanges == null) {
           tabletRanges = new HashMap<KeyExtent,List<Range>>();
           binnedRanges.put(last, tabletRanges);
         }
-
+      
         List<Range> rangeList = tabletRanges.get(extent);
         if (rangeList == null) {
           rangeList = new ArrayList<Range>();
           tabletRanges.put(extent, rangeList);
         }
-
+      
         rangeList.add(range);
-
+      
         if (extent.getEndRow() == null || range.afterEndKey(new Key(extent.getEndRow()).followingKey(PartialKey.ROW))) {
           break;
         }
-
+      
         lastExtent = extent;
       }
-
+    
     }
-
+  
     return binnedRanges;
   }
 
@@ -775,19 +773,19 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     log.setLevel(getLogLevel(job));
     validateOptions(job);
-
+  
     boolean autoAdjust = getAutoAdjustRanges(job);
     List<Range> tablesRanges = getRanges(job);
     LinkedList<InputSplit> splits = new LinkedList<InputSplit>();
-
+  
     String tableName = getInputTableName(job);
     List<Range> ranges = autoAdjust ? Range.mergeOverlapping(tablesRanges) : tablesRanges;
-
+  
     if (ranges.isEmpty()) {
       ranges = new ArrayList<Range>(1);
       ranges.add(new Range());
     }
-
+  
     // get the metadata information for these ranges
     Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
     TabletLocator tl;
@@ -806,10 +804,10 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         // its possible that the cache could contain complete, but old information about a tables tablets... so clear it
         tl.invalidateCache();
         Credentials creds = new Credentials(getPrincipal(job), AuthenticationTokenSerializer.deserialize(getTokenClass(job), getToken(job)));
-
+      
         while (!tl.binRanges(creds, ranges, binnedRanges).isEmpty()) {
           if (!(instance instanceof MockInstance)) {
-              tableId = Tables.getTableId(instance, tableName);
+            tableId = Tables.getTableId(instance, tableName);
             if (!Tables.exists(instance, tableId))
               throw new TableDeletedException(tableId);
             if (Tables.getTableState(instance, tableId) == TableState.OFFLINE)
@@ -825,12 +823,12 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       throw new IOException(e);
     }
     HashMap<Range,ArrayList<String>> splitsToAdd = null;
-
+  
     if (!autoAdjust)
       splitsToAdd = new HashMap<Range,ArrayList<String>>();
-
+  
     HashMap<String,String> hostNameCache = new HashMap<String,String>();
-
+  
     for (Entry<String,Map<KeyExtent,List<Range>>> tserverBin : binnedRanges.entrySet()) {
       String ip = tserverBin.getKey().split(":", 2)[0];
       String location = hostNameCache.get(ip);
@@ -839,7 +837,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         location = inetAddress.getHostName();
         hostNameCache.put(ip, location);
       }
-
+    
       for (Entry<KeyExtent,List<Range>> extentRanges : tserverBin.getValue().entrySet()) {
         Range ke = extentRanges.getKey().toDataRange();
         for (Range r : extentRanges.getValue()) {
@@ -857,11 +855,11 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         }
       }
     }
-
+  
     if (!autoAdjust)
       for (Entry<Range,ArrayList<String>> entry : splitsToAdd.entrySet())
         splits.add(new RangeInputSplit(tableName, tableId, entry.getKey(), entry.getValue().toArray(new String[0])));
-
+  
     return splits.toArray(new InputSplit[splits.size()]);
   }
 
@@ -869,17 +867,17 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
    * The Class RangeInputSplit. Encapsulates an Accumulo range for use in Map Reduce jobs.
    */
   public static class RangeInputSplit extends org.apache.accumulo.core.client.mapreduce.InputFormatBase.RangeInputSplit implements InputSplit {
-
+  
     public RangeInputSplit() {
       super();
     }
-
+  
     public RangeInputSplit(RangeInputSplit split) throws IOException {
       super(split);
     }
-
+  
     protected RangeInputSplit(String table, String tableId, Range range, String[] locations) {
-      super(table, tableId,  range, locations);
+      super(table, tableId, range, locations);
     }
   }
 

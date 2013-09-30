@@ -106,7 +106,7 @@ import org.slf4j.LoggerFactory;
       switch(fieldId) {
         case 1: // TABLE_ID
           return TABLE_ID;
-        case 2: // TABLE
+        case 2: // TABLE_NAME
           return TABLE_NAME;
         case 3: // OP
           return OP;
@@ -680,7 +680,7 @@ import org.slf4j.LoggerFactory;
               org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
             }
             break;
-          case 2: // TABLE
+          case 2: // TABLE_NAME
             if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
               struct.tableName = iprot.readString();
               struct.setTableNameIsSet(true);

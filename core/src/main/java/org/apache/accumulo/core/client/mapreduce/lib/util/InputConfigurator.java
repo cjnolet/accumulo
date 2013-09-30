@@ -97,7 +97,7 @@ public class InputConfigurator extends ConfiguratorBase {
 
   /**
    * Sets the name of the input table, over which this job will scan.
-   *
+   * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
@@ -150,12 +150,12 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param ranges
    *          the ranges that will be mapped over
    * @throws IllegalArgumentException
-   *          if the ranges cannot be encoded into base 64
+   *           if the ranges cannot be encoded into base 64
    * @since 1.5.0
    */
   public static void setRanges(Class<?> implementingClass, Configuration conf, Collection<Range> ranges) {
     notNull(ranges);
-
+  
     ArrayList<String> rangeStrings = new ArrayList<String>(ranges.size());
     try {
       for (Range r : ranges) {
@@ -179,11 +179,11 @@ public class InputConfigurator extends ConfiguratorBase {
    * @return the ranges
    * @throws IOException
    *           if the ranges have been encoded improperly
-   * @since 1.6.0
+   * @since 1.5.0
    * @see #setRanges(Class, Configuration, Collection)
    */
   public static List<Range> getRanges(Class<?> implementingClass, Configuration conf) throws IOException {
-
+  
     Collection<String> encodedRanges = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.RANGES));
     List<Range> ranges = new ArrayList<Range>();
     for (String rangeString : encodedRanges) {
@@ -195,10 +195,9 @@ public class InputConfigurator extends ConfiguratorBase {
     return ranges;
   }
 
-
   /**
    * Gets a list of the iterator settings (for iterators to apply to a scanner) from this configuration.
-   *
+   * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
@@ -208,12 +207,12 @@ public class InputConfigurator extends ConfiguratorBase {
    * @see #addIterator(Class, Configuration, IteratorSetting)
    */
   public static List<IteratorSetting> getIterators(Class<?> implementingClass, Configuration conf) {
-    String iterators = conf.get(enumToConfKey(implementingClass, ScanOpts.ITERATORS));
-
+    String iterators = conf.get(enumToConfKey(implementingClass,ScanOpts.ITERATORS));
+  
     // If no iterators are present, return an empty list
     if (iterators == null || iterators.isEmpty())
       return new ArrayList<IteratorSetting>();
-
+  
     // Compose the set of iterators encoded in the job configuration
     StringTokenizer tokens = new StringTokenizer(iterators, StringUtils.COMMA_STR);
     List<IteratorSetting> list = new ArrayList<IteratorSetting>();
@@ -230,7 +229,6 @@ public class InputConfigurator extends ConfiguratorBase {
     return list;
   }
 
-
   /**
    * Restricts the columns that will be mapped over for this job. This applies the columns to all tables that have been set on the job.
    * 
@@ -242,18 +240,17 @@ public class InputConfigurator extends ConfiguratorBase {
    *          a pair of {@link Text} objects corresponding to column family and column qualifier. If the column qualifier is null, the entire column family is
    *          selected. An empty set is the default and is equivalent to scanning the all columns.
    * @throws IllegalArgumentException
-   *          if the column family is null
+   *           if the column family is null
    * @since 1.5.0
-   * @deprecated since 1.6.0
    */
   public static void fetchColumns(Class<?> implementingClass, Configuration conf, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     notNull(columnFamilyColumnQualifierPairs);
     ArrayList<String> columnStrings = new ArrayList<String>();
     for (Pair<Text,Text> column : columnFamilyColumnQualifierPairs) {
-
+    
       if (column.getFirst() == null)
         throw new IllegalArgumentException("Column family can not be null");
-
+    
       String col = new String(Base64.encodeBase64(TextUtil.getBytes(column.getFirst())), Constants.UTF8);
       if (column.getSecond() != null)
         col += ":" + new String(Base64.encodeBase64(TextUtil.getBytes(column.getSecond())), Constants.UTF8);
@@ -262,10 +259,9 @@ public class InputConfigurator extends ConfiguratorBase {
     conf.setStrings(enumToConfKey(implementingClass, ScanOpts.COLUMNS), columnStrings.toArray(new String[0]));
   }
 
-
   /**
    * Gets the columns to be mapped over from this job.
-   *
+   * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
@@ -295,7 +291,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @param cfg
    *          the configuration of the iterator
    * @throws IllegalArgumentException
-   *          if the iterator can't be serialized into the configuration
+   *           if the iterator can't be serialized into the configuration
    * @since 1.5.0
    */
   public static void addIterator(Class<?> implementingClass, Configuration conf, IteratorSetting cfg) {
@@ -308,7 +304,7 @@ public class InputConfigurator extends ConfiguratorBase {
     } catch (IOException e) {
       throw new IllegalArgumentException("unable to serialize IteratorSetting");
     }
-
+  
     String confKey = enumToConfKey(implementingClass, ScanOpts.ITERATORS);
     String iterators = conf.get(confKey);
     // No iterators specified yet, create a new string
@@ -319,7 +315,7 @@ public class InputConfigurator extends ConfiguratorBase {
       iterators = iterators.concat(StringUtils.COMMA_STR + newIter);
     }
     // Store the iterators w/ the job
-    conf.set(confKey,iterators);
+    conf.set(confKey, iterators);
   }
 
   /**
@@ -339,7 +335,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.5.0
    */
   public static void setAutoAdjustRanges(Class<?> implementingClass, Configuration conf, boolean enableFeature) {
-    conf.setBoolean(enumToConfKey(implementingClass, Features.AUTO_ADJUST_RANGES), enableFeature);
+    conf.setBoolean(enumToConfKey(implementingClass,Features.AUTO_ADJUST_RANGES),enableFeature);
   }
 
   /**
@@ -476,13 +472,22 @@ public class InputConfigurator extends ConfiguratorBase {
     return conf.getBoolean(enumToConfKey(implementingClass, Features.SCAN_OFFLINE), false);
   }
 
+  /**
+   * Sets configurations for multiple tables at a time.
+   * @param implementingClass
+   *          the class whose name will be used as a prefix for the property configuration key
+   * @param conf
+   *          the Hadoop configuration object to configure
+   * @param tconf
+   *          an array of {@link TableQueryConfig} objects to associate with the job
+   */
   public static void setTableQueryConfigs(Class<?> implementingClass, Configuration conf, TableQueryConfig... tconf) {
     List<String> tableQueryConfigStrings = new ArrayList<String>();
-    for(TableQueryConfig queryConfig : tconf) {
+    for (TableQueryConfig queryConfig : tconf) {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       try {
         queryConfig.write(new DataOutputStream(baos));
-      } catch(IOException e) {
+      } catch (IOException e) {
         throw new IllegalStateException("Configuration for " + queryConfig.getTableName() + " could not be serialized.");
       }
       tableQueryConfigStrings.add(new String(Base64.encodeBase64(baos.toByteArray())));
@@ -491,17 +496,25 @@ public class InputConfigurator extends ConfiguratorBase {
     conf.setStrings(confKey, tableQueryConfigStrings.toArray(new String[0]));
   }
 
+  /**
+   * Returns all {@link TableQueryConfig} objects associated with this job.
+   * @param implementingClass
+   *          the class whose name will be used as a prefix for the property configuration key
+   * @param conf
+   *          the Hadoop configuration object to configure
+   * @return all of the table query configs for the job
+   */
   public static List<TableQueryConfig> getTableQueryConfigs(Class<?> implementingClass, Configuration conf) {
     List<TableQueryConfig> configs = new ArrayList<TableQueryConfig>();
     Collection<String> configStrings = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.TABLE_CONFIGS));
-    if(configStrings != null) {
-      for(String str : configStrings) {
-        try{
+    if (configStrings != null) {
+      for (String str : configStrings) {
+        try {
           byte[] bytes = Base64.decodeBase64(str.getBytes());
           ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
           configs.add(new TableQueryConfig(new DataInputStream(bais)));
           bais.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
           throw new IllegalStateException("The table query configurations could not be deserialized from the given configuration");
         }
       }
@@ -509,19 +522,29 @@ public class InputConfigurator extends ConfiguratorBase {
     TableQueryConfig defaultQueryConfig;
     try {
       defaultQueryConfig = getDefaultTableConfig(implementingClass, conf);
-    } catch(IOException e) {
+    } catch (IOException e) {
       throw new IllegalStateException("There was an error deserializing the default table configuration.");
     }
-    if(defaultQueryConfig != null)
+    if (defaultQueryConfig != null)
       configs.add(defaultQueryConfig);
-
+  
     return configs;
   }
 
-  public static TableQueryConfig getTableQueryConfigs(Class<?> implementingClass, Configuration conf, String tableName) {
-    List<TableQueryConfig> queryConfigs = getTableQueryConfigs(implementingClass,conf);
-    for(TableQueryConfig queryConfig : queryConfigs) {
-      if(queryConfig.getTableName().equals(tableName)) {
+  /**
+   * Returns the {@link TableQueryConfig} for the given table
+   * @param implementingClass
+   *          the class whose name will be used as a prefix for the property configuration key
+   * @param conf
+   *          the Hadoop configuration object to configure
+   * @param tableName
+   *          the table name for which to fetch the table query config
+   * @return the table query config for the given table name (if it exists) and null if it does not
+   */
+  public static TableQueryConfig getTableQueryConfig(Class<?> implementingClass, Configuration conf, String tableName) {
+    List<TableQueryConfig> queryConfigs = getTableQueryConfigs(implementingClass, conf);
+    for (TableQueryConfig queryConfig : queryConfigs) {
+      if (queryConfig.getTableName().equals(tableName)) {
         return queryConfig;
       }
     }
@@ -546,7 +569,7 @@ public class InputConfigurator extends ConfiguratorBase {
     String instanceType = conf.get(enumToConfKey(implementingClass, InstanceOpts.TYPE));
     if ("MockInstance".equals(instanceType))
       return new MockTabletLocator();
-    Instance instance = getInstance(implementingClass,conf);
+    Instance instance = getInstance(implementingClass, conf);
     return TabletLocator.getLocator(instance, new Text(Tables.getTableId(instance, tableName)));
   }
 
@@ -575,19 +598,19 @@ public class InputConfigurator extends ConfiguratorBase {
       Connector c = getInstance(implementingClass, conf).getConnector(principal, token);
       if (!c.securityOperations().authenticateUser(principal, token))
         throw new IOException("Unable to authenticate user");
-
-      for (TableQueryConfig tableConfig : getTableQueryConfigs(implementingClass,conf)) {
+    
+      for (TableQueryConfig tableConfig : getTableQueryConfigs(implementingClass, conf)) {
         if (!c.securityOperations().hasTablePermission(getPrincipal(implementingClass, conf), tableConfig.getTableName(), TablePermission.READ))
           throw new IOException("Unable to access table");
       }
-
-      for (TableQueryConfig tableConfig : getTableQueryConfigs(implementingClass,conf)) {
-        if(!tableConfig.shouldUseLocalIterators()) {
-          if(tableConfig.getIterators() != null) {
+    
+      for (TableQueryConfig tableConfig : getTableQueryConfigs(implementingClass, conf)) {
+        if (!tableConfig.shouldUseLocalIterators()) {
+          if (tableConfig.getIterators() != null) {
             for (IteratorSetting iter : tableConfig.getIterators()) {
               if (!c.tableOperations().testClassLoad(tableConfig.getTableName(), iter.getIteratorClass(), SortedKeyValueIterator.class.getName()))
                 throw new AccumuloException("Servers are unable to load " + iter.getIteratorClass() + " as a " + SortedKeyValueIterator.class.getName());
-
+            
             }
           }
         }
@@ -602,9 +625,8 @@ public class InputConfigurator extends ConfiguratorBase {
   }
 
   /**
-   * Returns the {@link TableQueryConfig} for the configuration based on the properties set using the single-table
-   * input methods.
-   *
+   * Returns the {@link TableQueryConfig} for the configuration based on the properties set using the single-table input methods.
+   * 
    * @param implementingClass
    *          the class whose name will be used as a prefix for the property configuration key
    * @param conf
@@ -614,22 +636,21 @@ public class InputConfigurator extends ConfiguratorBase {
    */
   protected static TableQueryConfig getDefaultTableConfig(Class<?> implementingClass, Configuration conf) throws IOException {
     String tableName = getInputTableName(implementingClass, conf);
-    if(tableName != null) {
+    if (tableName != null) {
       TableQueryConfig queryConfig = new TableQueryConfig(getInputTableName(implementingClass, conf));
       List<IteratorSetting> itrs = getIterators(implementingClass, conf);
-      if(itrs != null)
+      if (itrs != null)
         queryConfig.setIterators(itrs);
       Set<Pair<Text,Text>> columns = getFetchedColumns(implementingClass, conf);
-      if(columns != null)
+      if (columns != null)
         queryConfig.setColumns(columns);
       List<Range> ranges = getRanges(implementingClass, conf);
-      if(ranges != null)
+      if (ranges != null)
         queryConfig.setRanges(ranges);
-
-      queryConfig.setAutoAdjustRanges(getAutoAdjustRanges(implementingClass, conf))
-              .setUseIsolatedScanners(isIsolated(implementingClass, conf))
-              .setUseLocalIterators(usesLocalIterators(implementingClass, conf))
-              .setOfflineScan(isOfflineScan(implementingClass, conf));
+    
+      queryConfig.setAutoAdjustRanges(getAutoAdjustRanges(implementingClass, conf)).setUseIsolatedScanners( isIsolated
+              ( implementingClass,conf ) )
+          .setUseLocalIterators( usesLocalIterators( implementingClass,conf ) ).setOfflineScan( isOfflineScan( implementingClass,conf ) );
       return queryConfig;
     }
     return null;
