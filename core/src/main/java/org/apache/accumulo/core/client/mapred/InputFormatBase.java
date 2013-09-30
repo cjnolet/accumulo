@@ -599,7 +599,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
       // in case the table name changed, we can still use the previous name for terms of configuration,
       // but for the scanner, we'll need to reference the new table name.
       String actualNameForId = split.getTableName();
-      if(!(instance instanceof MockInstance)) {   // Really, the Tables helper class should not be tied to Zookeeper
+      if(!(instance instanceof MockInstance)) {
         try {
           actualNameForId = Tables.getTableName(instance, split.getTableId());
           if (!actualNameForId.equals(split.getTableName()))
@@ -615,7 +615,7 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
         log.debug("Creating scanner for table: " + getInputTableName(job));
         log.debug("Authorizations are: " + authorizations);
         if (isOfflineScan(job)) {
-          scanner = new OfflineScanner(instance, new Credentials(user, token), Tables.getTableId(instance, getInputTableName(job)), authorizations);
+          scanner = new OfflineScanner(instance, new Credentials(user, token), split.getTableId(), authorizations);
         } else {
           scanner = conn.createScanner(actualNameForId, authorizations);
         }
@@ -881,7 +881,6 @@ public abstract class InputFormatBase<K,V> implements InputFormat<K,V> {
     protected RangeInputSplit(String table, String tableId, Range range, String[] locations) {
       super(table, tableId,  range, locations);
     }
-
   }
 
 }

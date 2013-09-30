@@ -67,7 +67,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.5.0
    */
   public static enum ScanOpts {
-    TABLE, AUTHORIZATIONS, RANGES, COLUMNS, ITERATORS, TABLE_CONFIGS
+    TABLE_NAME, AUTHORIZATIONS, RANGES, COLUMNS, ITERATORS, TABLE_CONFIGS
   }
 
   /**
@@ -92,7 +92,7 @@ public class InputConfigurator extends ConfiguratorBase {
    */
   public static void setInputTableName(Class<?> implementingClass, Configuration conf, String tableName) {
     notNull(tableName);
-    conf.set(enumToConfKey(implementingClass, ScanOpts.TABLE), tableName);
+    conf.set(enumToConfKey(implementingClass, ScanOpts.TABLE_NAME), tableName);
   }
 
   /**
@@ -105,7 +105,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.5.0
    */
   public static String getInputTableName(Class<?> implementingClass, Configuration conf) {
-    return conf.get(enumToConfKey(implementingClass, ScanOpts.TABLE));
+    return conf.get(enumToConfKey(implementingClass, ScanOpts.TABLE_NAME));
   }
 
   /**

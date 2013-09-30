@@ -661,7 +661,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
       // in case the table name changed, we can still use the previous name for terms of configuration,
       // but for the scanner, we'll need to reference the new table name.
       String actualNameForId = split.getTableName();
-      if(!(instance instanceof MockInstance)) {   // Really, the Tables helper class should not be tied to Zookeeper
+      if(!(instance instanceof MockInstance)) {
         try {
           actualNameForId = Tables.getTableName(instance, split.getTableId());
           if (!actualNameForId.equals(split.getTableName()))
@@ -682,7 +682,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
         if (isOfflineScan(attempt)) {
           scanner = new OfflineScanner(instance, new Credentials(principal, token), split.getTableId(), authorizations);
         } else {
-          scanner = conn.createScanner(split.getTableName(), authorizations);
+          scanner = conn.createScanner(actualNameForId, authorizations);
         }
         if (isIsolated(attempt)) {
           log.info("Creating isolated scanner");
