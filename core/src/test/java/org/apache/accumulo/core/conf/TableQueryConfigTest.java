@@ -32,9 +32,7 @@ public class TableQueryConfigTest {
   @Test
   public void testSerialization_OnlyTable() throws IOException {
     byte[] serialized = serialize(tableQueryConfig);
-    ByteArrayInputStream bais = new ByteArrayInputStream(serialized);
-    TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
-    bais.close();
+    TableQueryConfig actualConfig = deserialize(serialized);
     
     assertEquals(tableQueryConfig, actualConfig);
   }
@@ -47,9 +45,7 @@ public class TableQueryConfigTest {
     tableQueryConfig.setRanges(ranges);
     
     byte[] serialized = serialize(tableQueryConfig);
-    ByteArrayInputStream bais = new ByteArrayInputStream(serialized);
-    TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
-    bais.close();
+    TableQueryConfig actualConfig = deserialize(serialized);
     
     assertEquals(ranges, actualConfig.getRanges());
   }
@@ -62,9 +58,7 @@ public class TableQueryConfigTest {
     tableQueryConfig.setColumns(columns);
     
     byte[] serialized = serialize(tableQueryConfig);
-    ByteArrayInputStream bais = new ByteArrayInputStream(serialized);
-    TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
-    bais.close();
+    TableQueryConfig actualConfig = deserialize(serialized);
     
     assertEquals(actualConfig.getColumns(), columns);
   }
@@ -76,11 +70,9 @@ public class TableQueryConfigTest {
     settings.add(new IteratorSetting(55, "iter2", "iterclass2"));
     tableQueryConfig.setIterators(settings);
     byte[] serialized = serialize(tableQueryConfig);
-    ByteArrayInputStream bais = new ByteArrayInputStream(serialized);
-    TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
-    bais.close();
-    
+    TableQueryConfig actualConfig = deserialize(serialized);
     assertEquals(actualConfig.getIterators(), settings);
+
   }
   
   private byte[] serialize(TableQueryConfig tableQueryConfig) throws IOException {
@@ -89,5 +81,12 @@ public class TableQueryConfigTest {
     baos.close();
     
     return baos.toByteArray();
+  }
+
+  private TableQueryConfig deserialize(byte[] bytes) throws IOException {
+    ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+    TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
+    bais.close();
+    return actualConfig;
   }
 }
