@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.accumulo.core.conf;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -9,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.data.Range;
@@ -33,78 +48,78 @@ public class TableQueryConfig implements Writable {
     checkNotNull(tableName);
     this.tableName = tableName;
   }
-
-  public TableQueryConfig(DataInput input) throws IOException{
+  
+  public TableQueryConfig(DataInput input) throws IOException {
     readFields(input);
   }
-
+  
   public TableQueryConfig setRanges(List<Range> ranges) {
     this.ranges = ranges;
     return this;
   }
-
+  
   public TableQueryConfig setColumns(Set<Pair<Text,Text>> columns) {
     this.columns = columns;
     return this;
   }
-
+  
   public TableQueryConfig setIterators(List<IteratorSetting> iterators) {
     this.iterators = iterators;
     return this;
   }
-
-  public TableQueryConfig setAutoAdjustRanges(boolean autoAdjustRanges){
-    this.autoAdjustRanges=autoAdjustRanges;
+  
+  public TableQueryConfig setAutoAdjustRanges(boolean autoAdjustRanges) {
+    this.autoAdjustRanges = autoAdjustRanges;
     return this;
   }
-
-  public TableQueryConfig setUseLocalIterators(boolean useLocalIterators){
-    this.useLocalIterators=useLocalIterators;
+  
+  public TableQueryConfig setUseLocalIterators(boolean useLocalIterators) {
+    this.useLocalIterators = useLocalIterators;
     return this;
   }
-
-  public TableQueryConfig setUseIsolatedScanners(boolean useIsolatedScanners){
-    this.useIsolatedScanners=useIsolatedScanners;
+  
+  public TableQueryConfig setUseIsolatedScanners(boolean useIsolatedScanners) {
+    this.useIsolatedScanners = useIsolatedScanners;
     return this;
   }
-
-  public boolean isOfflineScan(){
+  
+  public boolean isOfflineScan() {
     return offlineScan;
   }
-
-  public TableQueryConfig setOfflineScan(boolean offlineScan){
-    this.offlineScan=offlineScan;
+  
+  public TableQueryConfig setOfflineScan(boolean offlineScan) {
+    this.offlineScan = offlineScan;
     return this;
   }
-
-  public String getTableName(){
+  
+  public String getTableName() {
     return tableName;
   }
-
-  public List<IteratorSetting> getIterators(){
+  
+  public List<IteratorSetting> getIterators() {
     return iterators != null ? iterators : new ArrayList<IteratorSetting>();
   }
-
-  public List<Range> getRanges(){
+  
+  public List<Range> getRanges() {
     return ranges != null ? ranges : new ArrayList<Range>();
   }
-
-  public Set<Pair<Text,Text>> getColumns(){
+  
+  public Set<Pair<Text,Text>> getColumns() {
     return columns != null ? columns : new HashSet<Pair<Text,Text>>();
   }
-
-  public boolean shouldAutoAdjustRanges(){
+  
+  public boolean shouldAutoAdjustRanges() {
     return autoAdjustRanges;
   }
-
-  public boolean shouldUseLocalIterators(){
+  
+  public boolean shouldUseLocalIterators() {
     return useLocalIterators;
   }
-
-  public boolean shouldUseIsolatedScanners(){
+  
+  public boolean shouldUseIsolatedScanners() {
     return useIsolatedScanners;
   }
-
+  
   @Override
   public void write(DataOutput dataOutput) throws IOException {
     dataOutput.writeUTF(tableName);
@@ -180,36 +195,46 @@ public class TableQueryConfig implements Writable {
     useLocalIterators = dataInput.readBoolean();
     useIsolatedScanners = dataInput.readBoolean();
   }
-
+  
   @Override
-  public boolean equals(Object o){
-    if(this==o) return true;
-    if(o==null||getClass()!=o.getClass()) return false;
-
-    TableQueryConfig that=(TableQueryConfig)o;
-
-    if(autoAdjustRanges!=that.autoAdjustRanges) return false;
-    if(offlineScan!=that.offlineScan) return false;
-    if(useIsolatedScanners!=that.useIsolatedScanners) return false;
-    if(useLocalIterators!=that.useLocalIterators) return false;
-    if(columns!=null?!columns.equals(that.columns):that.columns!=null) return false;
-    if(iterators!=null?!iterators.equals(that.iterators):that.iterators!=null) return false;
-    if(ranges!=null?!ranges.equals(that.ranges):that.ranges!=null) return false;
-    if(tableName!=null?!tableName.equals(that.tableName):that.tableName!=null) return false;
-
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
+    
+    TableQueryConfig that = (TableQueryConfig) o;
+    
+    if (autoAdjustRanges != that.autoAdjustRanges)
+      return false;
+    if (offlineScan != that.offlineScan)
+      return false;
+    if (useIsolatedScanners != that.useIsolatedScanners)
+      return false;
+    if (useLocalIterators != that.useLocalIterators)
+      return false;
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null)
+      return false;
+    if (iterators != null ? !iterators.equals(that.iterators) : that.iterators != null)
+      return false;
+    if (ranges != null ? !ranges.equals(that.ranges) : that.ranges != null)
+      return false;
+    if (tableName != null ? !tableName.equals(that.tableName) : that.tableName != null)
+      return false;
+    
     return true;
   }
-
+  
   @Override
-  public int hashCode(){
-    int result=tableName!=null?tableName.hashCode():0;
-    result=31*result+(iterators!=null?iterators.hashCode():0);
-    result=31*result+(ranges!=null?ranges.hashCode():0);
-    result=31*result+(columns!=null?columns.hashCode():0);
-    result=31*result+(autoAdjustRanges?1:0);
-    result=31*result+(useLocalIterators?1:0);
-    result=31*result+(useIsolatedScanners?1:0);
-    result=31*result+(offlineScan?1:0);
+  public int hashCode() {
+    int result = tableName != null ? tableName.hashCode() : 0;
+    result = 31 * result + (iterators != null ? iterators.hashCode() : 0);
+    result = 31 * result + (ranges != null ? ranges.hashCode() : 0);
+    result = 31 * result + (columns != null ? columns.hashCode() : 0);
+    result = 31 * result + (autoAdjustRanges ? 1 : 0);
+    result = 31 * result + (useLocalIterators ? 1 : 0);
+    result = 31 * result + (useIsolatedScanners ? 1 : 0);
+    result = 31 * result + (offlineScan ? 1 : 0);
     return result;
   }
 }

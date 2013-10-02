@@ -301,44 +301,50 @@ public class AccumuloInputFormatTest {
     assertNull(e2);
   }
   
+  /**
+   * Verify {@link TableQueryConfig} objects get correctly serialized in the JobContext.
+   */
   @Test
   public void testTableQueryConfigSerialization() throws IOException {
     
     Job job = new Job();
     
-    TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a","b")))
-        .setColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"),new Text("CQ1"))))
-        .setIterators(Collections.singletonList(new IteratorSetting(50,"iter1","iterclass1")));
+    TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a", "b")))
+        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
-    TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a","b")))
-        .setColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"),new Text("CQ1"))))
-        .setIterators(Collections.singletonList(new IteratorSetting(50,"iter1","iterclass1")));
+    TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a", "b")))
+        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
     AccumuloInputFormat.setTableQueryConfigs(job, table1, table2);
     
     assertEquals(table1, AccumuloInputFormat.getTableQueryConfig(job, TEST_TABLE_1));
     assertEquals(table2, AccumuloInputFormat.getTableQueryConfig(job, TEST_TABLE_2));
   }
-
+  
+  /**
+   * Verify that union of legacy input and new multi-table input get returned for backwards compatibility.
+   */
   @Test
-  public void testTableQueryConfigBackwardsCompatibility() throws IOException {
-
+  public void testTableQueryConfigSingleAndMultitableMethods() throws IOException {
+    
     Job job = new Job();
-
-    TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a","b")))
-            .setColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"),new Text("CQ1"))))
-            .setIterators(Collections.singletonList(new IteratorSetting(50,"iter1","iterclass1")));
-
-    TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a","b")))
-            .setColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"),new Text("CQ1"))))
-            .setIterators(Collections.singletonList(new IteratorSetting(50,"iter1","iterclass1")));
-
+    
+    TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a", "b")))
+        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
+    
+    TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a", "b")))
+        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
+    
     AccumuloInputFormat.setTableQueryConfigs(job, table1);
     AccumuloInputFormat.setInputTableName(job, table2.getTableName());
     AccumuloInputFormat.setRanges(job, table2.getRanges());
     AccumuloInputFormat.fetchColumns(job, table2.getColumns());
     AccumuloInputFormat.addIterator(job, table2.getIterators().get(0));
-
+    
     assertEquals(table1, AccumuloInputFormat.getTableQueryConfig(job, TEST_TABLE_1));
     assertEquals(table2, AccumuloInputFormat.getTableQueryConfig(job, TEST_TABLE_2));
   }

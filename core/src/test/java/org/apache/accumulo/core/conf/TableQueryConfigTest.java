@@ -72,17 +72,16 @@ public class TableQueryConfigTest {
     byte[] serialized = serialize(tableQueryConfig);
     TableQueryConfig actualConfig = deserialize(serialized);
     assertEquals(actualConfig.getIterators(), settings);
-
+    
   }
   
   private byte[] serialize(TableQueryConfig tableQueryConfig) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     tableQueryConfig.write(new DataOutputStream(baos));
     baos.close();
-    
     return baos.toByteArray();
   }
-
+  
   private TableQueryConfig deserialize(byte[] bytes) throws IOException {
     ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
     TableQueryConfig actualConfig = new TableQueryConfig(new DataInputStream(bais));
