@@ -235,7 +235,7 @@ public class AccumuloInputFormatTest {
     public int run(String[] args) throws Exception {
       
       if (args.length != 4) {
-        throw new IllegalArgumentException("Usage : " + MRTester.class.getName() + " <user> <pass> <table>");
+        throw new IllegalArgumentException("Usage : " + MRTester.class.getName() + " <user> <pass> <table1> <table2>");
       }
       
       String user = args[0];
@@ -250,7 +250,6 @@ public class AccumuloInputFormatTest {
       
       AccumuloInputFormat.setConnectorInfo(job, user, new PasswordToken(pass));
       
-      // AccumuloInputFormat.setInputTableNames(job, Arrays.asList(new String[]{table1, table2}));
       TableQueryConfig tableConfig1 = new TableQueryConfig(table1);
       TableQueryConfig tableConfig2 = new TableQueryConfig(table2);
       
@@ -310,11 +309,11 @@ public class AccumuloInputFormatTest {
     Job job = new Job();
     
     TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a", "b")))
-        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .fetchColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"), new Text("CQ1"))))
         .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
     TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a", "b")))
-        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .fetchColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"), new Text("CQ1"))))
         .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
     AccumuloInputFormat.setTableQueryConfigs(job, table1, table2);
@@ -332,17 +331,17 @@ public class AccumuloInputFormatTest {
     Job job = new Job();
     
     TableQueryConfig table1 = new TableQueryConfig(TEST_TABLE_1).setRanges(Collections.singletonList(new Range("a", "b")))
-        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .fetchColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"), new Text("CQ1"))))
         .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
     TableQueryConfig table2 = new TableQueryConfig(TEST_TABLE_2).setRanges(Collections.singletonList(new Range("a", "b")))
-        .setColumns(Collections.singleton(new Pair<Text,Text>(new Text("CF1"), new Text("CQ1"))))
+        .fetchColumns(Collections.singleton(new Pair<Text, Text>(new Text("CF1"), new Text("CQ1"))))
         .setIterators(Collections.singletonList(new IteratorSetting(50, "iter1", "iterclass1")));
     
     AccumuloInputFormat.setTableQueryConfigs(job, table1);
     AccumuloInputFormat.setInputTableName(job, table2.getTableName());
     AccumuloInputFormat.setRanges(job, table2.getRanges());
-    AccumuloInputFormat.fetchColumns(job, table2.getColumns());
+    AccumuloInputFormat.fetchColumns(job, table2.getFetchedColumns());
     AccumuloInputFormat.addIterator(job, table2.getIterators().get(0));
     
     assertEquals(table1, AccumuloInputFormat.getTableQueryConfig(job, TEST_TABLE_1));

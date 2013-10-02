@@ -55,12 +55,12 @@ public class TableQueryConfigTest {
     Set<Pair<Text,Text>> columns = new HashSet<Pair<Text,Text>>();
     columns.add(new Pair<Text,Text>(new Text("cf1"), new Text("cq1")));
     columns.add(new Pair<Text,Text>(new Text("cf2"), null));
-    tableQueryConfig.setColumns(columns);
+    tableQueryConfig.fetchColumns(columns);
     
     byte[] serialized = serialize(tableQueryConfig);
     TableQueryConfig actualConfig = deserialize(serialized);
     
-    assertEquals(actualConfig.getColumns(), columns);
+    assertEquals(actualConfig.getFetchedColumns(), columns);
   }
   
   @Test

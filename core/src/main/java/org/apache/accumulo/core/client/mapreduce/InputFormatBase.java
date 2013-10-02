@@ -168,7 +168,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return the table name
    * @since 1.5.0
    * @see #setInputTableName(Job, String)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static String getInputTableName(JobContext context) {
     return InputConfigurator.getInputTableName(CLASS, getConfiguration(context));
   }
@@ -285,7 +287,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param tableName
    *          the table to use when the tablename is null in the write call
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setInputTableName(Job job, String tableName) {
     InputConfigurator.setInputTableName(CLASS, job.getConfiguration(), tableName);
   }
@@ -317,15 +321,16 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
   }
 
   /**
-   * Sets the input ranges to scan for all tables associated with this job. This will be added to any per-table ranges that have been set using
-   * {@link #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Collection)}
+   * Sets the input ranges to scan for all tables associated with this job.
    * 
    * @param job
    *          the Hadoop job instance to be configured
    * @param ranges
    *          the ranges that will be mapped over
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setRanges(Job job, Collection<Range> ranges) {
     InputConfigurator.setRanges(CLASS, job.getConfiguration(), ranges);
   }
@@ -339,7 +344,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @since 1.5.0
    * @see #setRanges(Job, Collection)
    * @see #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Collection)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static List<Range> getRanges(JobContext context) throws IOException {
     return InputConfigurator.getRanges(CLASS, getConfiguration(context));
   }
@@ -353,7 +360,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          a pair of {@link Text} objects corresponding to column family and column qualifier. If the column qualifier is null, the entire column family is
    *          selected. An empty set is the default and is equivalent to scanning the all columns.
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void fetchColumns(Job job, Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     InputConfigurator.fetchColumns(CLASS, job.getConfiguration(), columnFamilyColumnQualifierPairs);
   }
@@ -366,7 +375,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return a set of columns
    * @since 1.5.0
    * @see #fetchColumns(Job, Collection)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static Set<Pair<Text,Text>> getFetchedColumns(JobContext context) {
     return InputConfigurator.getFetchedColumns(CLASS, getConfiguration(context));
   }
@@ -379,7 +390,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param cfg
    *          the configuration of the iterator
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void addIterator(Job job, IteratorSetting cfg) {
     InputConfigurator.addIterator(CLASS, job.getConfiguration(), cfg);
   }
@@ -392,7 +405,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return a list of iterators
    * @since 1.5.0
    * @see #addIterator(Job, IteratorSetting)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static List<IteratorSetting> getIterators(JobContext context) {
     return InputConfigurator.getIterators(CLASS, getConfiguration(context));
   }
@@ -410,7 +425,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the feature is enabled if true, disabled otherwise
    * @see #setRanges(Job, Collection)
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setAutoAdjustRanges(Job job, boolean enableFeature) {
     InputConfigurator.setAutoAdjustRanges(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -423,7 +440,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return false if the feature is disabled, true otherwise
    * @since 1.5.0
    * @see #setAutoAdjustRanges(Job, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static boolean getAutoAdjustRanges(JobContext context) {
     return InputConfigurator.getAutoAdjustRanges(CLASS, getConfiguration(context));
   }
@@ -435,8 +454,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    *          the Hadoop job instance to be configured
    * @param configs
    *          the table query configs to be set on the configuration.
+   * @since 1.6.0
    */
-  public static void setTableQueryConfigs(JobContext job, TableQueryConfig... configs) {
+  public static void setTableQueryConfigs(Job job, TableQueryConfig... configs) {
     checkNotNull(configs);
     InputConfigurator.setTableQueryConfigs(CLASS, getConfiguration(job), configs);
   }
@@ -445,7 +465,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * Fetches all {@link TableQueryConfig}s that have been set on the given Hadoop configuration.
    * 
    * <p>
-   * Note this also returns the {@link TableQueryConfig} representing the table configurations set through the single table input methods (
+   * Note this also returns the {@link TableQueryConfig} representing the table configurations set through the single table input methods like
    * {@link #setInputTableName(org.apache.hadoop.mapreduce.Job, String)}, {@link #setRanges(org.apache.hadoop.mapreduce.Job, java.util.Collection)},
    * {@link #fetchColumns(org.apache.hadoop.mapreduce.Job, java.util.Collection)},
    * {@link #addIterator(org.apache.hadoop.mapreduce.Job, org.apache.accumulo.core.client.IteratorSetting)}, etc...)
@@ -453,6 +473,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param job
    *          the Hadoop job instance to be configured
    * @return
+   * @since 1.6.0
    */
   public static List<TableQueryConfig> getTableQueryConfigs(JobContext job) {
     return InputConfigurator.getTableQueryConfigs(CLASS, getConfiguration(job));
@@ -469,6 +490,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param tableName
    *          the table name for which to grab the config object
    * @return the {@link TableQueryConfig} for the given table
+   * @since 1.6.0
    */
   public static TableQueryConfig getTableQueryConfig(JobContext job, String tableName) {
     return InputConfigurator.getTableQueryConfig(CLASS,getConfiguration(job),tableName);
@@ -485,7 +507,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setScanIsolation(Job job, boolean enableFeature) {
     InputConfigurator.setScanIsolation(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -498,7 +522,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setScanIsolation(Job, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static boolean isIsolated(JobContext context) {
     return InputConfigurator.isIsolated(CLASS, getConfiguration(context));
   }
@@ -515,7 +541,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setLocalIterators(Job job, boolean enableFeature) {
     InputConfigurator.setLocalIterators(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -528,7 +556,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setLocalIterators(Job, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static boolean usesLocalIterators(JobContext context) {
     return InputConfigurator.usesLocalIterators(CLASS, getConfiguration(context));
   }
@@ -563,7 +593,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @param enableFeature
    *          the feature is enabled if true, disabled otherwise
    * @since 1.5.0
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   public static void setOfflineTableScan(Job job, boolean enableFeature) {
     InputConfigurator.setOfflineTableScan(CLASS, job.getConfiguration(), enableFeature);
   }
@@ -576,7 +608,9 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
    * @return true if the feature is enabled, false otherwise
    * @since 1.5.0
    * @see #setOfflineTableScan(Job, boolean)
+   * @deprecated since 1.6.0
    */
+  @Deprecated
   protected static boolean isOfflineScan(JobContext context) {
     return InputConfigurator.isOfflineScan(CLASS, getConfiguration(context));
   }
@@ -680,16 +714,16 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
         Connector conn = instance.getConnector(principal, token);
         log.debug("Creating scanner for table: " + split.getTableName());
         log.debug("Authorizations are: " + authorizations);
-        if (isOfflineScan(attempt)) {
+        if (tableConfig.isOfflineScan()) {
           scanner = new OfflineScanner(instance, new Credentials(principal, token), split.getTableId(), authorizations);
         } else {
           scanner = conn.createScanner(actualNameForId, authorizations);
         }
-        if (isIsolated(attempt)) {
+        if (tableConfig.shouldUseIsolatedScanners()) {
           log.info("Creating isolated scanner");
           scanner = new IsolatedScanner(scanner);
         }
-        if (usesLocalIterators(attempt)) {
+        if (tableConfig.shouldUseLocalIterators()) {
           log.info("Using local iterators");
           scanner = new ClientSideIteratorScanner(scanner);
         }
@@ -699,7 +733,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
       }
     
       // setup a scanner within the bounds of this split
-      for (Pair<Text,Text> c : tableConfig.getColumns()) {
+      for (Pair<Text,Text> c : tableConfig.getFetchedColumns()) {
         if (c.getSecond() != null) {
           log.debug("Fetching column " + c.getFirst() + ":" + c.getSecond());
           scanner.fetchColumn(c.getFirst(), c.getSecond());
@@ -867,7 +901,7 @@ public abstract class InputFormatBase<K,V> extends InputFormat<K,V> {
       Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
       TabletLocator tl;
       try {
-        if (isOfflineScan(conf)) {
+        if (tableConfig.isOfflineScan()) {
           binnedRanges = binOfflineTable(conf, tableConfig.getTableName(), ranges);
           while (binnedRanges == null) {
             // Some tablets were still online, try again

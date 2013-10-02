@@ -32,6 +32,9 @@ import org.apache.accumulo.core.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
+/**
+ * This class to holds a query configuration for a table. It contains all the properties needed to specify how rows should be returned from the table.
+ */
 public class TableQueryConfig implements Writable {
   
   private String tableName;
@@ -53,69 +56,195 @@ public class TableQueryConfig implements Writable {
     readFields(input);
   }
   
+  /**
+   * Returns the table name associated with this configuration
+   */
+  public String getTableName() {
+    return tableName;
+  }
+  
+  /**
+   * Sets the input ranges to scan for all tables associated with this job. This will be added to any per-table ranges that have been set using
+   * 
+   * @param ranges
+   *          the ranges that will be mapped over
+   * @since 1.6.0
+   */
   public TableQueryConfig setRanges(List<Range> ranges) {
     this.ranges = ranges;
     return this;
   }
   
-  public TableQueryConfig setColumns(Set<Pair<Text,Text>> columns) {
+  /**
+   * Returns the ranges to be queried in the configuration
+   */
+  public List<Range> getRanges() {
+    return ranges != null ? ranges : new ArrayList<Range>();
+  }
+  
+  /**
+   * Restricts the columns that will be mapped over for this job for the default input table.
+   * 
+   * @param columns
+   *          a pair of {@link Text} objects corresponding to column family and column qualifier. If the column qualifier is null, the entire column family is
+   *          selected. An empty set is the default and is equivalent to scanning the all columns.
+   * @since 1.6.0
+   */
+  public TableQueryConfig fetchColumns(Set<Pair<Text,Text>> columns) {
     this.columns = columns;
     return this;
   }
   
+  /**
+   * Returns the columns to be fetched for this configuration
+   */
+  public Set<Pair<Text,Text>> getFetchedColumns() {
+    return columns != null ? columns : new HashSet<Pair<Text,Text>>();
+  }
+  
+  /**
+   * Set iterators on to be used in the query.
+   * 
+   * @param iterators
+   *          the configurations for the iterators
+   * @since 1.6.0
+   */
   public TableQueryConfig setIterators(List<IteratorSetting> iterators) {
     this.iterators = iterators;
     return this;
   }
   
+  /**
+   * Returns the iterators to be set on this configuration
+   */
+  public List<IteratorSetting> getIterators() {
+    return iterators != null ? iterators : new ArrayList<IteratorSetting>();
+  }
+  
+  /**
+   * Controls the automatic adjustment of ranges for this job. This feature merges overlapping ranges, then splits them to align with tablet boundaries.
+   * Disabling this feature will cause exactly one Map task to be created for each specified range. The default setting is enabled. *
+   * 
+   * <p>
+   * By default, this feature is <b>enabled</b>.
+   * 
+   * @param autoAdjustRanges
+   *          the feature is enabled if true, disabled otherwise
+   * @see #setRanges(java.util.List)
+   * @since 1.6.0
+   */
   public TableQueryConfig setAutoAdjustRanges(boolean autoAdjustRanges) {
     this.autoAdjustRanges = autoAdjustRanges;
     return this;
   }
   
+  /**
+   * Determines whether a configuration has auto-adjust ranges enabled.
+   * 
+   * @return false if the feature is disabled, true otherwise
+   * @since 1.6.0
+   * @see #setAutoAdjustRanges(boolean)
+   */
+  public boolean shouldAutoAdjustRanges() {
+    return autoAdjustRanges;
+  }
+  
+  /**
+   * Controls the use of the {@link org.apache.accumulo.core.client.ClientSideIteratorScanner} in this job. Enabling this feature will cause the iterator stack
+   * to be constructed within the Map task, rather than within the Accumulo TServer. To use this feature, all classes needed for those iterators must be
+   * available on the classpath for the task.
+   * 
+   * <p>
+   * By default, this feature is <b>disabled</b>.
+   * 
+   * @param useLocalIterators
+   *          the feature is enabled if true, disabled otherwise
+   * @since 1.6.0
+   */
   public TableQueryConfig setUseLocalIterators(boolean useLocalIterators) {
     this.useLocalIterators = useLocalIterators;
     return this;
   }
   
-  public TableQueryConfig setUseIsolatedScanners(boolean useIsolatedScanners) {
-    this.useIsolatedScanners = useIsolatedScanners;
-    return this;
+  /**
+   * Determines whether a configuration uses local iterators.
+   * 
+   * @return true if the feature is enabled, false otherwise
+   * @since 1.6.0
+   * @see #setUseLocalIterators(boolean)
+   * @deprecated since 1.6.0
+   */
+  public boolean shouldUseLocalIterators() {
+    return useLocalIterators;
   }
   
-  public boolean isOfflineScan() {
-    return offlineScan;
-  }
-  
+  /**
+   * <p>
+   * Enable reading offline tables. By default, this feature is disabled and only online tables are scanned. This will make the map reduce job directly read the
+   * table's files. If the table is not offline, then the job will fail. If the table comes online during the map reduce job, it is likely that the job will
+   * fail.
+   * 
+   * <p>
+   * To use this option, the map reduce user will need access to read the Accumulo directory in HDFS.
+   * 
+   * <p>
+   * Reading the offline table will create the scan time iterator stack in the map process. So any iterators that are configured for the table will need to be
+   * on the mapper's classpath. The accumulo-site.xml may need to be on the mapper's classpath if HDFS or the Accumulo directory in HDFS are non-standard.
+   * 
+   * <p>
+   * One way to use this feature is to clone a table, take the clone offline, and use the clone as the input table for a map reduce job. If you plan to map
+   * reduce over the data many times, it may be better to the compact the table, clone it, take it offline, and use the clone for all map reduce jobs. The
+   * reason to do this is that compaction will reduce each tablet in the table to one file, and it is faster to read from one file.
+   * 
+   * <p>
+   * There are two possible advantages to reading a tables file directly out of HDFS. First, you may see better read performance. Second, it will support
+   * speculative execution better. When reading an online table speculative execution can put more load on an already slow tablet server.
+   * 
+   * <p>
+   * By default, this feature is <b>disabled</b>.
+   * 
+   * @param offlineScan
+   *          the feature is enabled if true, disabled otherwise
+   * @since 1.6.0
+   */
   public TableQueryConfig setOfflineScan(boolean offlineScan) {
     this.offlineScan = offlineScan;
     return this;
   }
   
-  public String getTableName() {
-    return tableName;
+  /**
+   * Determines whether a configuration has the offline table scan feature enabled.
+   * 
+   * @return true if the feature is enabled, false otherwise
+   * @since 1.6.0
+   * @see #setOfflineScan(boolean)
+   */
+  public boolean isOfflineScan() {
+    return offlineScan;
   }
   
-  public List<IteratorSetting> getIterators() {
-    return iterators != null ? iterators : new ArrayList<IteratorSetting>();
+  /**
+   * Controls the use of the {@link org.apache.accumulo.core.client.IsolatedScanner} in this job.
+   * 
+   * <p>
+   * By default, this feature is <b>disabled</b>.
+   * 
+   * @param useIsolatedScanners
+   *          the feature is enabled if true, disabled otherwise
+   * @since 1.6.0
+   */
+  public TableQueryConfig setUseIsolatedScanners(boolean useIsolatedScanners) {
+    this.useIsolatedScanners = useIsolatedScanners;
+    return this;
   }
   
-  public List<Range> getRanges() {
-    return ranges != null ? ranges : new ArrayList<Range>();
-  }
-  
-  public Set<Pair<Text,Text>> getColumns() {
-    return columns != null ? columns : new HashSet<Pair<Text,Text>>();
-  }
-  
-  public boolean shouldAutoAdjustRanges() {
-    return autoAdjustRanges;
-  }
-  
-  public boolean shouldUseLocalIterators() {
-    return useLocalIterators;
-  }
-  
+  /**
+   * Determines whether a configuration has isolation enabled.
+   * 
+   * @return true if the feature is enabled, false otherwise
+   * @since 1.6.0
+   * @see #setUseIsolatedScanners(boolean)
+   */
   public boolean shouldUseIsolatedScanners() {
     return useIsolatedScanners;
   }
